@@ -24,5 +24,6 @@ void EvolveM_2nd(
     const Geometry& geom,
     amrex::GpuArray<amrex::Real, 3>  prob_lo,
     amrex::GpuArray<amrex::Real, 3>  prob_hi,
-    amrex::Real const dt
+    amrex::Real const dt,
+    amrex::Real const time
 );

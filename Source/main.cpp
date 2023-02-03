@@ -427,9 +427,9 @@ void main_main ()
         MultiFab::Copy(Plt, PoissonPhi, 0, 25, 1, 0);
 
         WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
-                                                "Mx_xface","Mx_yface","Mx_zface",
-                                                "My_xface", "My_yface", "My_zface",
-                                                "Mz_xface", "Mz_yface", "Mz_zface",
+                                                "Mx","Mx_yface","Mx_zface",
+                                                "My", "My_yface", "My_zface",
+                                                "Mz", "Mz_yface", "Mz_zface",
                                                 "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
                                                 "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
                                                 "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface",
@@ -684,7 +684,7 @@ void main_main ()
 
         } else if (TimeIntegratorOrder == 3) {
 
-            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt);
+            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
         
         }  else {
             amrex::Abort("Time integrator order not recognized");
@@ -713,9 +713,9 @@ void main_main ()
             MultiFab::Copy(Plt, PoissonPhi, 0, 25, 1, 0);
 
             WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
-                                                    "Mx_xface","Mx_yface","Mx_zface",
-                                                    "My_xface", "My_yface", "My_zface",
-                                                    "Mz_xface", "Mz_yface", "Mz_zface",
+                                                    "Mx","Mx_yface","Mx_zface",
+                                                    "My", "My_yface", "My_zface",
+                                                    "Mz", "Mz_yface", "Mz_zface",
                                                     "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
                                                     "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
                                                     "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface",

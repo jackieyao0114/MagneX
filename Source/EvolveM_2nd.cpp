@@ -23,7 +23,8 @@ void EvolveM_2nd(
     const Geometry& geom,
     amrex::GpuArray<amrex::Real, 3>  prob_lo,
     amrex::GpuArray<amrex::Real, 3>  prob_hi,
-    amrex::Real const dt
+    amrex::Real const dt,
+    amrex::Real const time
 ){
 
     // build temporary vector<multifab,3> Mfield_prev, Mfield_error, a_temp, a_temp_static, b_temp_static
@@ -41,6 +42,8 @@ void EvolveM_2nd(
     DistributionMapping dm = Mfield[0].DistributionMap();
     LPInfo info;
     OpenBCSolver openbc({geom}, {ba}, {dm}, info);
+
+    amrex::Real t0 = 1.0e-10; // time when bias reduces to zero
 
     for (int i = 0; i < 3; i++){
         // H_demagfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 1, 0);
@@ -147,6 +150,16 @@ void EvolveM_2nd(
                     // when working on M_xface(i,j,k, 0:2) we have direct access to M_xface(i,j,k,0:2) and Hx(i,j,k)
                     // Hy and Hz can be acquired by interpolation
 
+                    // slowly reduce bias fields to zero
+                    if (time <= t0){
+                        H_bias_xface(i,j,k,0) = H_bias_xface(i,j,k,0) * (1-time/t0);
+                        H_bias_xface(i,j,k,1) = H_bias_xface(i,j,k,1) * (1-time/t0);
+                        H_bias_xface(i,j,k,2) = H_bias_xface(i,j,k,2) * (1-time/t0);
+                        
+                        // printf("time= %g \n", time);
+                        // printf("Hx_eff_old= %g \n", Hx_eff_old);
+                    }
+
                     // H_bias
                     amrex::Real Hx_eff_old = H_bias_xface(i,j,k,0);
                     amrex::Real Hy_eff_old = H_bias_xface(i,j,k,1);
@@ -233,6 +246,13 @@ void EvolveM_2nd(
                     // Hy and Hz can be acquired by interpolation
 
                     // H_bias
+                        
+                    if (time <= t0){
+                        H_bias_yface(i,j,k,0) = H_bias_yface(i,j,k,0) * (1-time/t0);
+                        H_bias_yface(i,j,k,1) = H_bias_yface(i,j,k,1) * (1-time/t0);
+                        H_bias_yface(i,j,k,2) = H_bias_yface(i,j,k,2) * (1-time/t0);
+                    } 
+
                     amrex::Real Hx_eff_old = H_bias_yface(i,j,k,0);
                     amrex::Real Hy_eff_old = H_bias_yface(i,j,k,1);
                     amrex::Real Hz_eff_old = H_bias_yface(i,j,k,2);
@@ -317,6 +337,13 @@ void EvolveM_2nd(
                     // Hy and Hz can be acquired by interpolation
 
                     // H_bias
+
+                    if (time <= t0){
+                        H_bias_zface(i,j,k,0) = H_bias_zface(i,j,k,0) * (1-time/t0);
+                        H_bias_zface(i,j,k,1) = H_bias_zface(i,j,k,1) * (1-time/t0);
+                        H_bias_zface(i,j,k,2) = H_bias_zface(i,j,k,2) * (1-time/t0);
+                    } 
+
                     amrex::Real Hx_eff_old = H_bias_zface(i,j,k,0);
                     amrex::Real Hy_eff_old = H_bias_zface(i,j,k,1);
                     amrex::Real Hz_eff_old = H_bias_zface(i,j,k,2);
@@ -484,6 +511,13 @@ void EvolveM_2nd(
                         // Hy and Hz can be acquired by interpolation
 
                         // H_bias
+
+                        if (time <= t0){
+                            H_bias_xface(i,j,k,0) = H_bias_xface(i,j,k,0) * (1-time/t0);
+                            H_bias_xface(i,j,k,1) = H_bias_xface(i,j,k,1) * (1-time/t0);
+                            H_bias_xface(i,j,k,2) = H_bias_xface(i,j,k,2) * (1-time/t0);
+                        } 
+
                         amrex::Real Hx_eff_prev = H_bias_xface(i,j,k,0);
                         amrex::Real Hy_eff_prev = H_bias_xface(i,j,k,1);
                         amrex::Real Hz_eff_prev = H_bias_xface(i,j,k,2);
@@ -601,6 +635,13 @@ void EvolveM_2nd(
                         // Hy and Hz can be acquired by interpolation
 
                         // H_bias
+
+                        if (time <= t0){
+                            H_bias_yface(i,j,k,0) = H_bias_yface(i,j,k,0) * (1-time/t0);
+                            H_bias_yface(i,j,k,1) = H_bias_yface(i,j,k,1) * (1-time/t0);
+                            H_bias_yface(i,j,k,2) = H_bias_yface(i,j,k,2) * (1-time/t0);
+                        } 
+
                         amrex::Real Hx_eff_prev = H_bias_yface(i,j,k,0);
                         amrex::Real Hy_eff_prev = H_bias_yface(i,j,k,1);
                         amrex::Real Hz_eff_prev = H_bias_yface(i,j,k,2);
@@ -718,6 +759,13 @@ void EvolveM_2nd(
                         // Hy and Hz can be acquired by interpolation
 
                         // H_bias
+
+                        if (time <= t0){
+                            H_bias_zface(i,j,k,0) = H_bias_zface(i,j,k,0) * (1-time/t0);
+                            H_bias_zface(i,j,k,1) = H_bias_zface(i,j,k,1) * (1-time/t0);
+                            H_bias_zface(i,j,k,2) = H_bias_zface(i,j,k,2) * (1-time/t0);
+                        } 
+
                         amrex::Real Hx_eff_prev = H_bias_zface(i,j,k,0);
                         amrex::Real Hy_eff_prev = H_bias_zface(i,j,k,1);
                         amrex::Real Hz_eff_prev = H_bias_zface(i,j,k,2);
