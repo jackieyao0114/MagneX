@@ -184,7 +184,7 @@ void InitializeFields(std::array< MultiFab, AMREX_SPACEDIM >&  Mfield,
                 Real z = prob_lo[2] + (k+0.5) * dx[2];
                
                 //x_face 
-               //  M_xface(i,j,k,0) = (z < 0 - ddx[2]) ? 1.392605752054084e5 : 0.; // z need s a tiny too; # z < 0 - tiny
+               //  M_xface(i,j,k,0) = (z < 0 - ddx[2]) ? 1.392605752054084e5 : 0.; // z need  a tiny too; # z < 0 - tiny
                //  M_xface(i,j,k,1) = 0._rt;
                //  M_xface(i,j,k,2) = (z >= 0 - ddx[2]) ? 1.392605752054084e5 : 0.; //# z >= 0 - tiny
 
@@ -196,9 +196,9 @@ void InitializeFields(std::array< MultiFab, AMREX_SPACEDIM >&  Mfield,
                //  H_bias_xface(i,j,k,1) = 2.387324146378430e4;
                //  H_bias_xface(i,j,k,2) = 0._rt;
 
-                H_bias_xface(i,j,k,0) = 1.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
-                H_bias_xface(i,j,k,1) = 1.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
-                H_bias_xface(i,j,k,2) = 1.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
+                H_bias_xface(i,j,k,0) = 50.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
+                H_bias_xface(i,j,k,1) = 50.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
+                H_bias_xface(i,j,k,2) = 50.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
 
              } else {
              
@@ -239,9 +239,9 @@ void InitializeFields(std::array< MultiFab, AMREX_SPACEDIM >&  Mfield,
                //  H_bias_yface(i,j,k,1) = 2.387324146378430e4;
                //  H_bias_yface(i,j,k,2) = 0._rt;
 
-               H_bias_yface(i,j,k,0) = 1.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
-               H_bias_yface(i,j,k,1) = 1.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
-               H_bias_yface(i,j,k,2) = 1.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
+               H_bias_yface(i,j,k,0) = 50.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
+               H_bias_yface(i,j,k,1) = 50.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
+               H_bias_yface(i,j,k,2) = 50.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
 
              } else {
              
@@ -281,9 +281,9 @@ void InitializeFields(std::array< MultiFab, AMREX_SPACEDIM >&  Mfield,
                //  H_bias_zface(i,j,k,1) = 2.387324146378430e4;
                //  H_bias_zface(i,j,k,2) = 0._rt;
 
-               H_bias_zface(i,j,k,0) = 1.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
-               H_bias_zface(i,j,k,1) = 1.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
-               H_bias_zface(i,j,k,2) = 1.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
+               H_bias_zface(i,j,k,0) = 50.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
+               H_bias_zface(i,j,k,1) = 50.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
+               H_bias_zface(i,j,k,2) = 50.0e5 * 1._rt/sqrt(3); // mumag standard problem #4; initialization stage for s-state
 
              } else {
              

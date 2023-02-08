@@ -371,10 +371,11 @@ void main_main ()
 
     //Declare MLMG object
     MLMG mlmg(mlabec);
-    mlmg.setVerbose(2);
+    mlmg.setVerbose(4);
 #else 
     OpenBCSolver openbc({geom}, {ba}, {dm}, info);
-    openbc.setVerbose(2);
+    openbc.setVerbose(4);
+    openbc.setBottomVerbose(4);
 #endif
 
     InitializeMagneticProperties(alpha, Ms, gamma, exchange, anisotropy,

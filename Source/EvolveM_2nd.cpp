@@ -43,7 +43,7 @@ void EvolveM_2nd(
     LPInfo info;
     OpenBCSolver openbc({geom}, {ba}, {dm}, info);
 
-    amrex::Real t0 = 1.0e-10; // time when bias reduces to zero
+    amrex::Real t0 = 1.0e-9; // time when bias reduces to zero
 
     for (int i = 0; i < 3; i++){
         // H_demagfield_old[i].define(convert(ba, IntVect::TheDimensionVector(i)), dm, 1, 0);
@@ -152,12 +152,16 @@ void EvolveM_2nd(
 
                     // slowly reduce bias fields to zero
                     if (time <= t0){
-                        H_bias_xface(i,j,k,0) = H_bias_xface(i,j,k,0) * (1-time/t0);
-                        H_bias_xface(i,j,k,1) = H_bias_xface(i,j,k,1) * (1-time/t0);
-                        H_bias_xface(i,j,k,2) = H_bias_xface(i,j,k,2) * (1-time/t0);
+                        H_bias_xface(i,j,k,0) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                        H_bias_xface(i,j,k,1) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                        H_bias_xface(i,j,k,2) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
                         
                         // printf("time= %g \n", time);
                         // printf("Hx_eff_old= %g \n", Hx_eff_old);
+                    } else {
+                        H_bias_xface(i,j,k,0) = 0.0;
+                        H_bias_xface(i,j,k,1) = 0.0;
+                        H_bias_xface(i,j,k,2) = 0.0;
                     }
 
                     // H_bias
@@ -248,10 +252,14 @@ void EvolveM_2nd(
                     // H_bias
                         
                     if (time <= t0){
-                        H_bias_yface(i,j,k,0) = H_bias_yface(i,j,k,0) * (1-time/t0);
-                        H_bias_yface(i,j,k,1) = H_bias_yface(i,j,k,1) * (1-time/t0);
-                        H_bias_yface(i,j,k,2) = H_bias_yface(i,j,k,2) * (1-time/t0);
-                    } 
+                        H_bias_yface(i,j,k,0) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                        H_bias_yface(i,j,k,1) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                        H_bias_yface(i,j,k,2) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                    } else {
+                        H_bias_yface(i,j,k,0) = 0.0;
+                        H_bias_yface(i,j,k,1) = 0.0;
+                        H_bias_yface(i,j,k,2) = 0.0;
+                    }
 
                     amrex::Real Hx_eff_old = H_bias_yface(i,j,k,0);
                     amrex::Real Hy_eff_old = H_bias_yface(i,j,k,1);
@@ -339,10 +347,14 @@ void EvolveM_2nd(
                     // H_bias
 
                     if (time <= t0){
-                        H_bias_zface(i,j,k,0) = H_bias_zface(i,j,k,0) * (1-time/t0);
-                        H_bias_zface(i,j,k,1) = H_bias_zface(i,j,k,1) * (1-time/t0);
-                        H_bias_zface(i,j,k,2) = H_bias_zface(i,j,k,2) * (1-time/t0);
-                    } 
+                        H_bias_zface(i,j,k,0) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                        H_bias_zface(i,j,k,1) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                        H_bias_zface(i,j,k,2) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                    } else {
+                        H_bias_zface(i,j,k,0) = 0.0;
+                        H_bias_zface(i,j,k,1) = 0.0;
+                        H_bias_zface(i,j,k,2) = 0.0;
+                    }
 
                     amrex::Real Hx_eff_old = H_bias_zface(i,j,k,0);
                     amrex::Real Hy_eff_old = H_bias_zface(i,j,k,1);
@@ -513,10 +525,14 @@ void EvolveM_2nd(
                         // H_bias
 
                         if (time <= t0){
-                            H_bias_xface(i,j,k,0) = H_bias_xface(i,j,k,0) * (1-time/t0);
-                            H_bias_xface(i,j,k,1) = H_bias_xface(i,j,k,1) * (1-time/t0);
-                            H_bias_xface(i,j,k,2) = H_bias_xface(i,j,k,2) * (1-time/t0);
-                        } 
+                            H_bias_xface(i,j,k,0) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                            H_bias_xface(i,j,k,1) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                            H_bias_xface(i,j,k,2) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                        } else {
+                            H_bias_xface(i,j,k,0) = 0.0;
+                            H_bias_xface(i,j,k,1) = 0.0;
+                            H_bias_xface(i,j,k,2) = 0.0;
+                        }
 
                         amrex::Real Hx_eff_prev = H_bias_xface(i,j,k,0);
                         amrex::Real Hy_eff_prev = H_bias_xface(i,j,k,1);
@@ -637,10 +653,14 @@ void EvolveM_2nd(
                         // H_bias
 
                         if (time <= t0){
-                            H_bias_yface(i,j,k,0) = H_bias_yface(i,j,k,0) * (1-time/t0);
-                            H_bias_yface(i,j,k,1) = H_bias_yface(i,j,k,1) * (1-time/t0);
-                            H_bias_yface(i,j,k,2) = H_bias_yface(i,j,k,2) * (1-time/t0);
-                        } 
+                            H_bias_yface(i,j,k,0) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                            H_bias_yface(i,j,k,1) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                            H_bias_yface(i,j,k,2) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                        } else {
+                            H_bias_yface(i,j,k,0) = 0.0;
+                            H_bias_yface(i,j,k,1) = 0.0;
+                            H_bias_yface(i,j,k,2) = 0.0;
+                        }
 
                         amrex::Real Hx_eff_prev = H_bias_yface(i,j,k,0);
                         amrex::Real Hy_eff_prev = H_bias_yface(i,j,k,1);
@@ -761,10 +781,14 @@ void EvolveM_2nd(
                         // H_bias
 
                         if (time <= t0){
-                            H_bias_zface(i,j,k,0) = H_bias_zface(i,j,k,0) * (1-time/t0);
-                            H_bias_zface(i,j,k,1) = H_bias_zface(i,j,k,1) * (1-time/t0);
-                            H_bias_zface(i,j,k,2) = H_bias_zface(i,j,k,2) * (1-time/t0);
-                        } 
+                            H_bias_zface(i,j,k,0) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                            H_bias_zface(i,j,k,1) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                            H_bias_zface(i,j,k,2) = 50.0e5 * 1._rt/sqrt(3) * (1-time/t0);
+                        } else {
+                            H_bias_zface(i,j,k,0) = 0.0;
+                            H_bias_zface(i,j,k,1) = 0.0;
+                            H_bias_zface(i,j,k,2) = 0.0;
+                        }
 
                         amrex::Real Hx_eff_prev = H_bias_zface(i,j,k,0);
                         amrex::Real Hy_eff_prev = H_bias_zface(i,j,k,1);

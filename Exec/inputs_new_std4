@@ -1,12 +1,16 @@
-dt = 1.0e-14
-nsteps = 80
-plot_int = 2
+dt = 3.0e-14
+nsteps = 2000000
+plot_int = 10
+chk_int = 5000
+# restart = 20000
 
 TimeIntegratorOrder = 3
 
 ######### this is my original setup ###########
 # n_cell = 256 128 128
-max_grid_size = 64
+# max_grid_size = 64
+max_grid_size = 256
+
 # prob_lo = -300.e-9 -70.5e-9 -32.0e-9
 # prob_hi =  300.e-9  70.0e-9  128.0e-9
 
@@ -25,6 +29,14 @@ max_grid_size = 64
 # prob_lo = -300.e-9 -70.0e-9 -96.0e-9
 # prob_hi =  300.e-9  70.0e-9  96.0e-9
 
+# # fast converging: 1.4 s/step, needs 4 iter per step
+# n_cell = 32 16 8
+# prob_lo = -60.e-9 -20.0e-9 -6.0e-9
+# prob_hi =  60.e-9  20.0e-9  6.0e-9
+
+# mag_lo = -50.e-9 -16.5e-9 -1.5e-9
+# mag_hi =  50.e-9  16.5e-9  1.5e-9
+
 # fast converging: 1.2 s/step, needs 4 iter per step
 n_cell = 256 128 8
 prob_lo = -300.e-9 -70.0e-9 -6.0e-9
@@ -32,6 +44,14 @@ prob_hi =  300.e-9  70.0e-9  6.0e-9
 
 mag_lo = -250.e-9 -62.5e-9 -1.5e-9
 mag_hi =  250.e-9  62.5e-9  1.5e-9
+
+# # fast converging: 1.2 s/step, needs 4 iter per step
+# n_cell = 512 256 16
+# prob_lo = -300.e-9 -70.0e-9 -6.0e-9
+# prob_hi =  300.e-9  70.0e-9  6.0e-9
+
+# mag_lo = -250.e-9 -62.5e-9 -1.5e-9
+# mag_hi =  250.e-9  62.5e-9  1.5e-9
 
 # # not converging
 # n_cell = 256 128 128
