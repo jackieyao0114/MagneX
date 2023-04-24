@@ -8,7 +8,8 @@ USE_CUDA     = FALSE
 COMP         = gnu
 DIM          = 3
 
-NEUMANN = TRUE
+NEUMANN = FALSE
+USE_SUNDIALS = FALSE
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
@@ -26,10 +27,6 @@ ifeq ($(NEUMANN), TRUE)
   DEFINES += -DNEUMANN
 endif
 
-USE_SUNDIALS = TRUE
-USE_CVODE_LIBS = TRUE
-USE_ARKODE_LIBS = TRUE
-
 ifeq ($(USE_SUNDIALS),TRUE)
 SUNDIALS_ROOT ?= ../../sundials/instdir
 SUNDIALS_LIB_DIR ?= $(SUNDIALS_ROOT)/lib
@@ -45,8 +42,4 @@ LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_cvode
 LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_arkode
 LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nvecmanyvector
 endif
-
-include $(AMREX_HOME)/Src/Extern/SUNDIALS/Make.package
-
-
 
