@@ -178,16 +178,22 @@ void InitializeFields(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, A
                 Real z = prob_lo[2] + (k+0.5) * dx[2];
                
                 //x_face 
-                M_xface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
+               //  M_xface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
+               //  M_xface(i,j,k,1) = 0._rt;
+               //  M_xface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
+                M_xface(i,j,k,0) = (z < 0) ? Ms_xface_arr(i,j,k) : 0.;
                 M_xface(i,j,k,1) = 0._rt;
-                M_xface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
+                M_xface(i,j,k,2) = (z >= 0) ? Ms_xface_arr(i,j,k) : 0.;
                // M_xface(i,j,k,0) = 8.0e5 /sqrt(3.0);
                // M_xface(i,j,k,1) = 8.0e5 /sqrt(3.0);
                // M_xface(i,j,k,2) = 8.0e5 /sqrt(3.0);
 
-                H_bias_xface(i,j,k,0) = 0._rt;         
-                H_bias_xface(i,j,k,1) = 2.387324146378430e4;
-                H_bias_xface(i,j,k,2) = 0._rt;
+               //  H_bias_xface(i,j,k,0) = 0._rt;         
+               //  H_bias_xface(i,j,k,1) = 2.387324146378430e4;
+               //  H_bias_xface(i,j,k,2) = 0._rt;
+               H_bias_xface(i,j,k,0) = 0._rt;         
+               H_bias_xface(i,j,k,1) = 0._rt;
+               H_bias_xface(i,j,k,2) = 0._rt;
 
              } else {
              
@@ -216,16 +222,22 @@ void InitializeFields(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, A
                 Real z = prob_lo[2] + (k+0.5) * dx[2];
                
                 //y_face
-                M_yface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
-                M_yface(i,j,k,1) = 0._rt;
-                M_yface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
+               //  M_yface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
+               //  M_yface(i,j,k,1) = 0._rt;
+               //  M_yface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
+               M_yface(i,j,k,0) = (z < 0) ? Ms_yface_arr(i,j,k) : 0.;
+               M_yface(i,j,k,1) = 0._rt;
+               M_yface(i,j,k,2) = (z >= 0) ? Ms_yface_arr(i,j,k) : 0.;
                //  M_yface(i,j,k,0) = 8.0e5 /sqrt(3.0);
                //  M_yface(i,j,k,1) = 8.0e5 /sqrt(3.0);
                //  M_yface(i,j,k,2) = 8.0e5 /sqrt(3.0);
 
-                H_bias_yface(i,j,k,0) = 0._rt;         
-                H_bias_yface(i,j,k,1) = 2.387324146378430e4;
-                H_bias_yface(i,j,k,2) = 0._rt;
+               //  H_bias_yface(i,j,k,0) = 0._rt;         
+               //  H_bias_yface(i,j,k,1) = 2.387324146378430e4;
+               //  H_bias_yface(i,j,k,2) = 0._rt;
+               H_bias_yface(i,j,k,0) = 0._rt;         
+               H_bias_yface(i,j,k,1) = 0._rt; 
+               H_bias_yface(i,j,k,2) = 0._rt;
 
              } else {
              
@@ -253,16 +265,22 @@ void InitializeFields(amrex::Vector<MultiFab>& Mfield, //std::array< MultiFab, A
                 Real z = prob_lo[2] + k * dx[2];
                
                 //z_face
-                M_zface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
-                M_zface(i,j,k,1) = 0._rt;
-                M_zface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
+               //  M_zface(i,j,k,0) = (z < 0) ? 1.392605752054084e5 : 0.;
+               //  M_zface(i,j,k,1) = 0._rt;
+               //  M_zface(i,j,k,2) = (z >= 0) ? 1.392605752054084e5 : 0.;
+               M_zface(i,j,k,0) = (z < 0) ? Ms_zface_arr(i,j,k) : 0.;
+               M_zface(i,j,k,1) = 0._rt;
+               M_zface(i,j,k,2) = (z >= 0) ? Ms_zface_arr(i,j,k) : 0.;
                //  M_zface(i,j,k,0) = 8.0e5 /sqrt(3.0);
                //  M_zface(i,j,k,1) = 8.0e5 /sqrt(3.0);
                //  M_zface(i,j,k,2) = 8.0e5 /sqrt(3.0);
 
-                H_bias_zface(i,j,k,0) = 0._rt;
-                H_bias_zface(i,j,k,1) = 2.387324146378430e4;
-                H_bias_zface(i,j,k,2) = 0._rt;
+               //  H_bias_zface(i,j,k,0) = 0._rt;
+               //  H_bias_zface(i,j,k,1) = 2.387324146378430e4;
+               //  H_bias_zface(i,j,k,2) = 0._rt;
+               H_bias_zface(i,j,k,0) = 0._rt;
+               H_bias_zface(i,j,k,1) = 0._rt;
+               H_bias_zface(i,j,k,2) = 0._rt;
 
              } else {
              

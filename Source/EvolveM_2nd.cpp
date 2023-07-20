@@ -515,6 +515,12 @@ void EvolveM_2nd(
                             Hx_eff_prev += H_exchange_coeff * Laplacian_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 0);
                             Hy_eff_prev += H_exchange_coeff * Laplacian_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 0);
                             Hz_eff_prev += H_exchange_coeff * Laplacian_Mag(M_xface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 0);
+
+                            if (i == 0 && j == 0 && k == 0){
+                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hx_exchange_xface = " << Hx_eff_prev << "\n";
+                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hy_exchange_xface = " << Hy_eff_prev << "\n";
+                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hz_exchange_xface = " << Hz_eff_prev << "\n";
+                            }
                         }
 
                         if (anisotropy_coupling == 1){
@@ -632,6 +638,12 @@ void EvolveM_2nd(
                             Hx_eff_prev += H_exchange_coeff * Laplacian_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 1);
                             Hy_eff_prev += H_exchange_coeff * Laplacian_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 1);
                             Hz_eff_prev += H_exchange_coeff * Laplacian_Mag(M_yface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 1);
+
+                            if (i == 0 && j == 0 && k == 0){
+                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hx_exchange_yface = " << Hx_eff_prev << "\n";
+                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hy_exchange_yface = " << Hy_eff_prev << "\n";
+                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hz_exchange_yface = " << Hz_eff_prev << "\n";
+                            }
                         }
 
                         if (anisotropy_coupling == 1){
@@ -749,6 +761,12 @@ void EvolveM_2nd(
                             Hx_eff_prev += H_exchange_coeff * Laplacian_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 0, 2);
                             Hy_eff_prev += H_exchange_coeff * Laplacian_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 1, 2);
                             Hz_eff_prev += H_exchange_coeff * Laplacian_Mag(M_zface_prev, Ms_lo_x, Ms_hi_x, Ms_lo_y, Ms_hi_y, Ms_lo_z, Ms_hi_z, i, j, k, dx, 2, 2);
+
+                            if (i == 0 && j == 0 && k == 0){
+                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hx_exchange_zface = " << Hx_eff_prev << "\n";
+                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hy_exchange_zface = " << Hy_eff_prev << "\n";
+                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hz_exchange_zface = " << Hz_eff_prev << "\n";
+                            }
                         }
 
                         if (anisotropy_coupling == 1){
