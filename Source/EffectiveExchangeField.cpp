@@ -130,20 +130,6 @@ void CalculateH_exchange(
                         H_exchange_xface(i,j,k,2) = H_exchange_coeff * Laplacian_Mag(M_xface, Ms_lo_x, Ms_hi_x, dMzdx_BC_lo_x, dMzdx_BC_hi_x,
                                                                                               Ms_lo_y, Ms_hi_y, dMzdy_BC_lo_y, dMzdy_BC_hi_y,
                                                                                               Ms_lo_z, Ms_hi_z, dMzdz_BC_lo_z, dMzdz_BC_hi_z, i, j, k, dd, 2, 0);
-
-                        if (i == 0 && j == 0 && k == 0){
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdx_BC_lo_x_xface = " << dMzdx_BC_lo_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdx_BC_hi_x_xface = " << dMzdx_BC_hi_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdy_BC_lo_y_xface = " << dMzdy_BC_lo_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdy_BC_hi_y_xface = " << dMzdy_BC_hi_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMxdx_BC_lo_x_xface = " << dMxdx_BC_lo_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMxdx_BC_hi_x_xface = " << dMxdx_BC_hi_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMydy_BC_lo_y_xface = " << dMydy_BC_lo_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMydy_BC_hi_y_xface = " << dMydy_BC_hi_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hx_exchange_xface = " << H_exchange_xface(i,j,k,0) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hy_exchange_xface = " << H_exchange_xface(i,j,k,1) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hz_exchange_xface = " << H_exchange_xface(i,j,k,2) << "\n";
-                        }
                     }
                 }
             });
@@ -230,21 +216,6 @@ void CalculateH_exchange(
                                                                                               Ms_lo_y, Ms_hi_y, dMzdy_BC_lo_y, dMzdy_BC_hi_y,
                                                                                               Ms_lo_z, Ms_hi_z, dMzdz_BC_lo_z, dMzdz_BC_hi_z, i, j, k, dd, 2, 1);
                         
-                        if (i == 0 && j == 0 && k == 0){
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", xi_DMI = " << xi_DMI << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Mz_yface = " << M_yface(i,j,k,2) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdx_BC_lo_x_yface = " << dMzdx_BC_lo_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdx_BC_hi_x_yface = " << dMzdx_BC_hi_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdy_BC_lo_y_yface = " << dMzdy_BC_lo_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdy_BC_hi_y_yface = " << dMzdy_BC_hi_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMxdx_BC_lo_x_yface = " << dMxdx_BC_lo_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMxdx_BC_hi_x_yface = " << dMxdx_BC_hi_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMydy_BC_lo_y_yface = " << dMydy_BC_lo_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMydy_BC_hi_y_yface = " << dMydy_BC_hi_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hx_exchange_yface = " << H_exchange_yface(i,j,k,0) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hy_exchange_yface = " << H_exchange_yface(i,j,k,1) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hz_exchange_yface = " << H_exchange_yface(i,j,k,2) << "\n";
-                        }
                     }
                 }
             });
@@ -330,19 +301,6 @@ void CalculateH_exchange(
                                                                                               Ms_lo_y, Ms_hi_y, dMzdy_BC_lo_y, dMzdy_BC_hi_y,
                                                                                               Ms_lo_z, Ms_hi_z, dMzdz_BC_lo_z, dMzdz_BC_hi_z, i, j, k, dd, 2, 2);
 
-                        if (i == 0 && j == 0 && k == 0){
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdx_BC_lo_x_zface = " << dMzdx_BC_lo_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdx_BC_hi_x_zface = " << dMzdx_BC_hi_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdy_BC_lo_y_zface = " << dMzdy_BC_lo_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdy_BC_hi_y_zface = " << dMzdy_BC_hi_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMxdx_BC_lo_x_zface = " << dMxdx_BC_lo_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMxdx_BC_hi_x_zface = " << dMxdx_BC_hi_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMydy_BC_lo_y_zface = " << dMydy_BC_lo_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMydy_BC_hi_y_zface = " << dMydy_BC_hi_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hx_exchange_zface = " << H_exchange_zface(i,j,k,0) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hy_exchange_zface = " << H_exchange_zface(i,j,k,1) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hz_exchange_zface = " << H_exchange_zface(i,j,k,2) << "\n";
-                        }
                     }
                 }
             });

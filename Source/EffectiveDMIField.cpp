@@ -96,21 +96,6 @@ void CalculateH_DMI(
                         H_DMI_xface(i,j,k,2) = H_DMI_coeff * (-DMDx_Mag(M_xface, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, i, j, k, dd, 0, 0) // x component at x nodality
                                                               -DMDy_Mag(M_xface, Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, i, j, k, dd, 1, 0)); // y component at x nodality;
 
-                        if (i == 0 && j == 0 && k == 0){
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdx_BC_lo_x_xface = " << dMzdx_BC_lo_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdx_BC_hi_x_xface = " << dMzdx_BC_hi_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdy_BC_lo_y_xface = " << dMzdy_BC_lo_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdy_BC_hi_y_xface = " << dMzdy_BC_hi_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMxdx_BC_lo_x_xface = " << dMxdx_BC_lo_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMxdx_BC_hi_x_xface = " << dMxdx_BC_hi_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMydy_BC_lo_y_xface = " << dMydy_BC_lo_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMydy_BC_hi_y_xface = " << dMydy_BC_hi_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", xi_DMI_xface = " << xi_DMI << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", H_DMI_coeff_xface = " << H_DMI_coeff << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hx_DMI_xface = " << H_DMI_xface(i,j,k,0) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hy_DMI_xface = " << H_DMI_xface(i,j,k,1) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hz_DMI_xface = " << H_DMI_xface(i,j,k,2) << "\n";
-                        }
                     }
                 }
             });
@@ -165,22 +150,6 @@ void CalculateH_DMI(
                         H_DMI_yface(i,j,k,2) = H_DMI_coeff * (-DMDx_Mag(M_yface, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, i, j, k, dd, 0, 1) // x component at y nodality
                                                               -DMDy_Mag(M_yface, Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, i, j, k, dd, 1, 1)); // y component at ynodality;
                         
-                        if (i == 0 && j == 0 && k == 0){
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdx_BC_lo_x_yface = " << dMzdx_BC_lo_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdx_BC_hi_x_yface = " << dMzdx_BC_hi_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdy_BC_lo_y_yface = " << dMzdy_BC_lo_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdy_BC_hi_y_yface = " << dMzdy_BC_hi_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMxdx_BC_lo_x_yface = " << dMxdx_BC_lo_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMxdx_BC_hi_x_yface = " << dMxdx_BC_hi_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMydy_BC_lo_y_yface = " << dMydy_BC_lo_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMydy_BC_hi_y_yface = " << dMydy_BC_hi_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", xi_DMI_yface = " << xi_DMI << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", H_DMI_coeff_yface = " << H_DMI_coeff << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hx_DMI_yface = " << H_DMI_yface(i,j,k,0) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hy_DMI_yface = " << H_DMI_yface(i,j,k,1) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hz_DMI_yface = " << H_DMI_yface(i,j,k,2) << "\n";
-                        }
-                        
                     }
                 }
             });
@@ -234,21 +203,6 @@ void CalculateH_DMI(
                         H_DMI_zface(i,j,k,2) = H_DMI_coeff * (-DMDx_Mag(M_zface, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, i, j, k, dd, 0, 2) // x component at z nodality
                                                               -DMDy_Mag(M_zface, Ms_lo_y, Ms_hi_y, dMydy_BC_lo_y, dMydy_BC_hi_y, i, j, k, dd, 1, 2)); // y component at z nodality;
                         
-                        if (i == 0 && j == 0 && k == 0){
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdx_BC_lo_x_zface = " << dMzdx_BC_lo_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdx_BC_hi_x_zface = " << dMzdx_BC_hi_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdy_BC_lo_y_zface = " << dMzdy_BC_lo_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMzdy_BC_hi_y_zface = " << dMzdy_BC_hi_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMxdx_BC_lo_x_zface = " << dMxdx_BC_lo_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMxdx_BC_hi_x_zface = " << dMxdx_BC_hi_x << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMydy_BC_lo_y_zface = " << dMydy_BC_lo_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", dMydy_BC_hi_y_zface = " << dMydy_BC_hi_y << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", xi_DMI_zface = " << xi_DMI << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", H_DMI_coeff_zface = " << H_DMI_coeff << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hx_DMI_zface = " << H_DMI_zface(i,j,k,0) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hy_DMI_zface = " << H_DMI_zface(i,j,k,1) << "\n";
-                            amrex::Print() << "i=" << i << ", j=" << j << ", k=" << k << ", Hz_DMI_zface = " << H_DMI_zface(i,j,k,2) << "\n";
-                        }
                     }
                 }
             });
