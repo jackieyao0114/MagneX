@@ -20,7 +20,11 @@ void Compute_LLG_RHS(
                    int anisotropy_coupling,
                    int M_normalization,
                    Real mu0,
-                   const Geometry& geom, const Real time);
+                   const Geometry& geom, 
+                   amrex::GpuArray<amrex::Real, 3>  prob_lo,
+                   amrex::GpuArray<amrex::Real, 3>  prob_hi,
+                   amrex::Real const dt,
+                   const Real time);
 
 void NormalizeM( Array< MultiFab, AMREX_SPACEDIM >& Mfield,
 		 MultiFab& Ms, int M_normalization);

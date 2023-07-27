@@ -5,7 +5,7 @@
 void Compute_LLG_RHS(
                    Array< MultiFab, AMREX_SPACEDIM >&  LLG_RHS,
                    const Array< MultiFab, AMREX_SPACEDIM >&   Mfield_old,
-		   Array< MultiFab, AMREX_SPACEDIM >&   H_demagfield,
+                   Array< MultiFab, AMREX_SPACEDIM >&   H_demagfield,
                    Array< MultiFab, AMREX_SPACEDIM >&   H_biasfield,
                    Array< MultiFab, AMREX_SPACEDIM >&   H_exchangefield,
                    Array< MultiFab, AMREX_SPACEDIM >&   H_DMIfield,
@@ -19,7 +19,11 @@ void Compute_LLG_RHS(
                    int anisotropy_coupling,
                    int M_normalization, 
                    Real mu0,
-                   const Geometry& geom, const Real time)
+                   const Geometry& geom, 
+                   amrex::GpuArray<amrex::Real, 3>  prob_lo,
+                   amrex::GpuArray<amrex::Real, 3>  prob_hi,
+                   amrex::Real const dt,
+                   const Real time)
 {
         //for (MFIter mfi(*Mfield[0]); mfi.isValid(); ++mfi)
         for (MFIter mfi(LLG_RHS[0]); mfi.isValid(); ++mfi)
@@ -72,6 +76,15 @@ void Compute_LLG_RHS(
                     amrex::Real Hx_eff = Hx_bias(i,j,k);
                     amrex::Real Hy_eff = Hy_bias(i,j,k);
                     amrex::Real Hz_eff = Hz_bias(i,j,k);
+
+
+                    // PSSW validation
+                    amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
+                    amrex::Real frequency = 1.5e9; // frequency of input microwave H
+                    amrex::Real TP = 1./frequency;
+                    Hx_bias(i,j,k) = 24.0 * (exp(-(time-3.* TP)*(time-3.* TP)/(2*TP*TP))*cos(2*3.141592653589793*frequency*time))*cos(z/345.0e-7 * 3.141592653589793);
+                    Hy_bias(i,j,k) = 2.387324146378430e4; // 300 Oe
+                    Hz_bias(i,j,k) = 0.;
 
                     if(demag_coupling == 1)
                     {

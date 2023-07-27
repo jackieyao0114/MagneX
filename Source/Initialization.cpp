@@ -118,16 +118,22 @@ void InitializeFields(Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
                //  M_xface(i,j,k,0) = (z < 0) ? Ms_xface_arr(i,j,k) : 0.;
                //  M_xface(i,j,k,1) = 0._rt;
                //  M_xface(i,j,k,2) = (z >= 0) ? Ms_xface_arr(i,j,k) : 0.;
-                 Mx(i,j,k) = (y < 0) ? 1.392605752054084e5 : 0.;
-                 My(i,j,k) = 0._rt;
-                 Mz(i,j,k) = (y >= 0) ? 1.392605752054084e5 : 0.;
+               //   Mx(i,j,k) = (y < 0) ? 1.392605752054084e5 : 0.;
+               //   My(i,j,k) = 0._rt;
+               //   Mz(i,j,k) = (y >= 0) ? 1.392605752054084e5 : 0.;
+               //   Hxbias(i,j,k) = 0._rt;         
+               //   Hybias(i,j,k) = 3.7e4; //0._rt;
+               //   Hzbias(i,j,k) = 0._rt;
                // M_xface(i,j,k,0) = 8.0e5 /sqrt(3.0);
                // M_xface(i,j,k,1) = 8.0e5 /sqrt(3.0);
                // M_xface(i,j,k,2) = 8.0e5 /sqrt(3.0);
 
-                Hxbias(i,j,k) = 0._rt;         
-                Hybias(i,j,k) = 3.7e4; //0._rt;
-                Hzbias(i,j,k) = 0._rt;
+                 Mx(i,j,k) = 0._rt;
+                 My(i,j,k) = Ms_arr(i,j,k);
+                 Mz(i,j,k) = 0._rt;
+                 Hxbias(i,j,k) = 0._rt;         
+                 Hybias(i,j,k) = 2.387324146378430e4;
+                 Hzbias(i,j,k) = 0._rt;
 
              } else {
              

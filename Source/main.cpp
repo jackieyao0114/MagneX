@@ -511,7 +511,7 @@ void main_main ()
 
            //Evolve M
            // Compute f^n = f(M^n, H^n)
-           Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
+           Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
 
            // M^{n+1} = M^n + dt * f^n
 	   for(int i = 0; i < 3; i++){
@@ -575,7 +575,7 @@ void main_main ()
         }
 
 	   // Compute f^{n} = f(M^{n}, H^{n})
-           Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
+           Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
 
            while(!stop_iter){
 
@@ -613,7 +613,7 @@ void main_main ()
 
 	      // LLG RHS with new H_demag and M_field_pre
 	      // Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
-              Compute_LLG_RHS(LLG_RHS_pre, Mfield_prev_iter, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
+              Compute_LLG_RHS(LLG_RHS_pre, Mfield_prev_iter, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
 
 	      // Corrector step update M
 	      // M^{n+1, *} = M^n + 0.5 * dt * (f^n + f^{n+1, *})
