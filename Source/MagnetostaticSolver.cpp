@@ -1,11 +1,10 @@
 #include "MagnetostaticSolver.H"
-#include "MagLaplacian.H"
+#include "CartesianAlgorithm.H"
 
 void ComputePoissonRHS(MultiFab&                        PoissonRHS,
-                       //Array<MultiFab, AMREX_SPACEDIM>& Mfield,
-		       const amrex::Vector<MultiFab>& Mfield,
-                       Array<MultiFab, AMREX_SPACEDIM>& Ms,
-                       const Geometry&                 geom)
+                       Array<MultiFab, AMREX_SPACEDIM>& Mfield,
+                       MultiFab&                        Ms,
+                       const Geometry&                  geom)
 {
     for ( MFIter mfi(PoissonRHS); mfi.isValid(); ++mfi )
         {
@@ -13,18 +12,18 @@ void ComputePoissonRHS(MultiFab&                        PoissonRHS,
             // extract dx from the geometry object
             GpuArray<Real,AMREX_SPACEDIM> dx = geom.CellSizeArray();
 
-            const Array4<Real const>& M_xface = Mfield[0].array(mfi);         
-            const Array4<Real const>& M_yface = Mfield[1].array(mfi);         
-            const Array4<Real const>& M_zface = Mfield[2].array(mfi);   
+            const Array4<Real const>& Mx = Mfield[0].array(mfi);         
+            const Array4<Real const>& My = Mfield[1].array(mfi);         
+            const Array4<Real const>& Mz = Mfield[2].array(mfi);   
 
             const Array4<Real>& rhs = PoissonRHS.array(mfi);
 
             amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
 
-               rhs(i,j,k) =  DivergenceDx_Mag(M_xface, i, j, k, dx, 0)
-                           + DivergenceDy_Mag(M_yface, i, j, k, dx, 1)
-                           + DivergenceDz_Mag(M_zface, i, j, k, dx, 2);
+                rhs(i,j,k) =  DivergenceDx_Mag(Mx, i, j, k, dx)
+                            + DivergenceDy_Mag(My, i, j, k, dx)
+                            + DivergenceDz_Mag(Mz, i, j, k, dx);
                 
             });
         }
@@ -54,11 +53,9 @@ void ComputeHfromPhi(MultiFab&                        PoissonPhi,
 
             amrex::ParallelFor( bx, [=] AMREX_GPU_DEVICE (int i, int j, int k)
             {
-                     Hx_demag(i,j,k) = -(phi(i+1,j,k) - phi(i-1,j,k))/2.0/(dx[0]);
-                     Hy_demag(i,j,k) = -(phi(i,j+1,k) - phi(i,j-1,k))/2.0/(dx[1]);
-                     Hz_demag(i,j,k) = -(phi(i,j,k+1) - phi(i,j,k-1))/2.0/(dx[2]); // consider using GetGradSolution function from amrex
-             });
+                Hx_demag(i,j,k) = -(phi(i+1,j,k) - phi(i-1,j,k))/2.0/(dx[0]);
+                Hy_demag(i,j,k) = -(phi(i,j+1,k) - phi(i,j-1,k))/2.0/(dx[1]);
+                Hz_demag(i,j,k) = -(phi(i,j,k+1) - phi(i,j,k-1))/2.0/(dx[2]); // consider using GetGradSolution function from amrex
+            });
         }
-
 }
-

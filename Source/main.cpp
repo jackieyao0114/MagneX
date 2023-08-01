@@ -10,12 +10,17 @@
 #include "myfunc.H"
 #include "Initialization.H"
 #include "MagnetostaticSolver.H"
-#include "MagLaplacian.H"
+#include "EffectiveExchangeField.H"
+#include "EffectiveDMIField.H"
+#include "EffectiveAnisotropyField.H"
+#include "CartesianAlgorithm.H"
 #include "Diagnostics.H"
 #include "EvolveM.H"
 #include "EvolveM_2nd.H"
 #include "Checkpoint.H"
+#ifdef USE_TIME_INTEGRATOR
 #include <AMReX_TimeIntegrator.H>
+#endif
 
 using namespace amrex;
 
@@ -66,15 +71,15 @@ void main_main ()
     int TimeIntegratorOption;
 
     // Magnetic Properties
-    Real alpha_val, gamma_val, Ms_val, exchange_val, anisotropy_val;
+    Real alpha_val, gamma_val, Ms_val, exchange_val, DMI_val, anisotropy_val;
     Real mu0;
     amrex::GpuArray<amrex::Real, 3> anisotropy_axis; 
 
     int demag_coupling;
     int M_normalization;
     int exchange_coupling;
+    int DMI_coupling;
     int anisotropy_coupling;
-
 
     // inputs parameters
     {
@@ -103,13 +108,14 @@ void main_main ()
         pp.get("gamma_val",gamma_val);
         pp.get("Ms_val",Ms_val);
         pp.get("exchange_val",exchange_val);
+        pp.get("DMI_val",DMI_val);
         pp.get("anisotropy_val",anisotropy_val);
 
         pp.get("demag_coupling",demag_coupling);
         pp.get("M_normalization", M_normalization);
         pp.get("exchange_coupling", exchange_coupling);
+        pp.get("DMI_coupling", DMI_coupling);
         pp.get("anisotropy_coupling", anisotropy_coupling);
-
 
         // Default nsteps to 10, allow us to set it to something else in the inputs file
         nsteps = 10;
@@ -120,14 +126,14 @@ void main_main ()
         plot_int = -1;
         pp.query("plot_int",plot_int);
 
-	// Default chk_int to -1, allow us to set it to something else in the inputs file
+	    // Default chk_int to -1, allow us to set it to something else in the inputs file
         //  If chk_int < 0 then no chk files will be written
         chk_int = -1;
         pp.query("chk_int",chk_int);
 
-	// query restart
-	restart = -1;
-	pp.query("restart",restart);
+	    // query restart
+	    restart = -1;
+	    pp.query("restart",restart);
 	
         // time step
         pp.get("dt",dt);
@@ -166,22 +172,30 @@ void main_main ()
     // time = starting time in the simulation
     Real time = 0.0;	
 
-    //Array<MultiFab, AMREX_SPACEDIM> Mfield;
+    Array<MultiFab, AMREX_SPACEDIM> Mfield;
+    Array<MultiFab, AMREX_SPACEDIM> Mfield_old;
+    Array<MultiFab, AMREX_SPACEDIM> Mfield_prev_iter;
+    Array<MultiFab, AMREX_SPACEDIM> Mfield_error;
     Array<MultiFab, AMREX_SPACEDIM> H_biasfield;
     Array<MultiFab, AMREX_SPACEDIM> H_demagfield;
+    Array<MultiFab, AMREX_SPACEDIM> H_exchangefield;
+    Array<MultiFab, AMREX_SPACEDIM> H_DMIfield;
+    Array<MultiFab, AMREX_SPACEDIM> H_anisotropyfield;
 
-    amrex::Vector<MultiFab> Mfield(AMREX_SPACEDIM);
+    Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
+    Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_pre;
+    Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_avg;
 
     BoxArray ba;
     DistributionMapping dm;
     
     if (restart > 0) {
 
-      start_step = restart+1;
+        start_step = restart+1;
 
-      // read in Mfield, H_biasfield, and ba
-      // create a DistributionMapping dm
-      ReadCheckPoint(restart,time,Mfield,H_biasfield,H_demagfield,ba,dm);
+        // read in Mfield, H_biasfield, and ba
+        // create a DistributionMapping dm
+        ReadCheckPoint(restart,time,Mfield,H_biasfield,H_demagfield,ba,dm);
       
     }
     
@@ -201,11 +215,11 @@ void main_main ()
     Box domain(dom_lo, dom_hi);
     
     if (restart == -1) {
-      // Initialize the boxarray "ba" from the single box "domain"
-      ba.define(domain);
+        // Initialize the boxarray "ba" from the single box "domain"
+        ba.define(domain);
 
-      // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
-      ba.maxSize(max_grid_size);
+        // Break up boxarray "ba" into chunks no larger than "max_grid_size" along a direction
+        ba.maxSize(max_grid_size);
     }
 
     // This defines the physical box in each direction.
@@ -220,108 +234,55 @@ void main_main ()
     geom.define(domain, real_box, CoordSys::cartesian, is_periodic);
 
     // Nghost = number of ghost cells for each array
-    int Nghost = 2;
+    int Nghost = 1;
+    int Ncomp = 1;
 
     // How Boxes are distrubuted among MPI processes
     if (restart == -1) {
-      dm.define(ba);
+        dm.define(ba);
     }
-
+   
     // Allocate multifabs
-    if (restart == -1) {
-      // face-centered Mfield
-      AMREX_D_TERM(Mfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
-		   Mfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
-		   Mfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
-
-      // face-centered H_biasfield
-      AMREX_D_TERM(H_biasfield[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-		   H_biasfield[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-		   H_biasfield[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-      for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
-        H_demagfield[dir].define(ba, dm, 1, 1);
-        H_demagfield[dir].setVal(0.);
-      }
+    for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+        //Cell-centered fields
+        Mfield_old[dir].define(ba, dm, Ncomp, Nghost);
+        Mfield_prev_iter[dir].define(ba, dm, Ncomp, Nghost);
+        Mfield_error[dir].define(ba, dm, Ncomp, Nghost);
+        H_exchangefield[dir].define(ba, dm, Ncomp, 0);
+        H_DMIfield[dir].define(ba, dm, Ncomp, 0);
+        H_anisotropyfield[dir].define(ba, dm, Ncomp, 0);
+        LLG_RHS[dir].define(ba, dm, 1, 0);
+        LLG_RHS_pre[dir].define(ba, dm, 1, 0);
+        LLG_RHS_avg[dir].define(ba, dm, 1, 0);
     }
 
-    //Array<MultiFab, AMREX_SPACEDIM> Mfield_old;
-    amrex::Vector<MultiFab> Mfield_old(AMREX_SPACEDIM);
-    // face-centered Mfield_old
-    AMREX_D_TERM(Mfield_old[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
-                 Mfield_old[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
-                 Mfield_old[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
+    if (restart == -1) {
+        for (int dir = 0; dir < AMREX_SPACEDIM; dir++) {
+            //Cell-centered fields
+            Mfield[dir].define(ba, dm, Ncomp, Nghost);
+            H_biasfield[dir].define(ba, dm, Ncomp, Nghost);
+            H_demagfield[dir].define(ba, dm, 1, Nghost);
+        }
+    }
 
-    //Array<MultiFab, AMREX_SPACEDIM> Mfield_prev_iter;
-    amrex::Vector<MultiFab> Mfield_prev_iter(AMREX_SPACEDIM);
-    // face-centered Mfield at predictor step (for 2nd order time integrator)
-    AMREX_D_TERM(Mfield_prev_iter[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, Nghost);,
-                 Mfield_prev_iter[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, Nghost);,
-                 Mfield_prev_iter[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, Nghost););
-
-    //Array<MultiFab, AMREX_SPACEDIM> Mfield_error;
-    amrex::Vector<MultiFab> Mfield_error(AMREX_SPACEDIM);
-    // face-centered Mfield at predictor step (for 2nd order time integrator)
-    AMREX_D_TERM(Mfield_error[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-                 Mfield_error[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-                 Mfield_error[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-    //Array<MultiFab, AMREX_SPACEDIM> LLG_RHS;
-    amrex::Vector<MultiFab> LLG_RHS(AMREX_SPACEDIM);
-    // face-centered LLG_RHS
-    AMREX_D_TERM(LLG_RHS[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-                 LLG_RHS[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-                 LLG_RHS[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-    //Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_pre;
-    amrex::Vector<MultiFab> LLG_RHS_pre(AMREX_SPACEDIM);
-    // face-centered LLG_RHS
-    AMREX_D_TERM(LLG_RHS_pre[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-                 LLG_RHS_pre[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-                 LLG_RHS_pre[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-    Array<MultiFab, AMREX_SPACEDIM> LLG_RHS_avg;
-    // face-centered LLG_RHS
-    AMREX_D_TERM(LLG_RHS_avg[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 3, 0);,
-                 LLG_RHS_avg[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 3, 0);,
-                 LLG_RHS_avg[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 3, 0););
-
-    //Face-centered magnetic properties
-    std::array< MultiFab, AMREX_SPACEDIM > alpha;
-    AMREX_D_TERM(alpha[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                 alpha[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                 alpha[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
-
-    std::array< MultiFab, AMREX_SPACEDIM > gamma;
-    AMREX_D_TERM(gamma[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                 gamma[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                 gamma[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
-
-    std::array< MultiFab, AMREX_SPACEDIM > Ms;
-    AMREX_D_TERM(Ms[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 1);,
-                 Ms[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 1);,
-                 Ms[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 1););
-
-    std::array< MultiFab, AMREX_SPACEDIM > exchange;
-    AMREX_D_TERM(exchange[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                 exchange[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                 exchange[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
-
-    std::array< MultiFab, AMREX_SPACEDIM > anisotropy;
-    AMREX_D_TERM(anisotropy[0].define(convert(ba,IntVect(AMREX_D_DECL(1,0,0))), dm, 1, 0);,
-                 anisotropy[1].define(convert(ba,IntVect(AMREX_D_DECL(0,1,0))), dm, 1, 0);,
-                 anisotropy[2].define(convert(ba,IntVect(AMREX_D_DECL(0,0,1))), dm, 1, 0););
-
+    MultiFab alpha(ba, dm, Ncomp, 0);
+    MultiFab gamma(ba, dm, Ncomp, 0);
+    MultiFab Ms(ba, dm, Ncomp, Nghost);
+    MultiFab exchange(ba, dm, Ncomp, 0);
+    MultiFab DMI(ba, dm, Ncomp, 0);
+    MultiFab anisotropy(ba, dm, Ncomp, 0);
 
     amrex::Print() << "==================== Initial Setup ====================\n";
     amrex::Print() << " demag_coupling      = " << demag_coupling      << "\n";
     amrex::Print() << " M_normalization     = " << M_normalization     << "\n";
     amrex::Print() << " exchange_coupling   = " << exchange_coupling   << "\n";
+    amrex::Print() << " DMI_coupling        = " << DMI_coupling        << "\n";
     amrex::Print() << " anisotropy_coupling = " << anisotropy_coupling << "\n";
     amrex::Print() << " Ms                  = " << Ms_val              << "\n";
     amrex::Print() << " alpha               = " << alpha_val           << "\n";
     amrex::Print() << " gamma               = " << gamma_val           << "\n";
     amrex::Print() << " exchange_value      = " << exchange_val        << "\n";
+    amrex::Print() << " DMI_value           = " << DMI_val             << "\n";
     amrex::Print() << " anisotropy_value    = " << anisotropy_val      << "\n";
     amrex::Print() << "=======================================================\n";
 
@@ -335,9 +296,10 @@ void main_main ()
         LLG_RHS[idim].setVal(0.);
         LLG_RHS_pre[idim].setVal(0.);
         LLG_RHS_avg[idim].setVal(0.);
+        H_demagfield[idim].setVal(0.);
     }
 
-    MultiFab Plt(ba, dm, 26, 0);
+    MultiFab Plt(ba, dm, 21, 0);
 
     //Solver for Poisson equation
     LPInfo info;
@@ -357,9 +319,9 @@ void main_main ()
     //Periodic
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
         if(is_periodic[idim]){
-          lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Periodic;
+            lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Periodic;
         } else {
-          lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Neumann;
+            lo_mlmg_bc[idim] = hi_mlmg_bc[idim] = LinOpBCType::Neumann;
         }
     }
 
@@ -392,8 +354,8 @@ void main_main ()
     openbc.setVerbose(2);
 #endif
 
-    InitializeMagneticProperties(alpha, Ms, gamma, exchange, anisotropy,
-                                 alpha_val, Ms_val, gamma_val, exchange_val, anisotropy_val, 
+    InitializeMagneticProperties(alpha, Ms, gamma, exchange, DMI, anisotropy,
+                                 alpha_val, Ms_val, gamma_val, exchange_val, DMI_val, anisotropy_val,
                                  prob_lo, prob_hi, mag_lo, mag_hi, geom);
 
     // initialize to zero; for demag_coupling==0 these aren't used
@@ -422,361 +384,384 @@ void main_main ()
             // Calculate H from Phi
             ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
         }
+
+        if (exchange_coupling == 1){
+            CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+        }
+
+        if(DMI_coupling == 1){
+            CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+        }
+
+        if(anisotropy_coupling == 1){
+            CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+        }
     }
 
     // Write a plotfile of the initial data if plot_int > 0
     if (plot_int > 0)
     {
         int plt_step = 0;
-	if (restart > 0) {
-	  plt_step = restart;
-	}
+        if (restart > 0) {
+            plt_step = restart;
+        }
         const std::string& pltfile = amrex::Concatenate("plt",plt_step,8);
 
         //Averaging face-centerd Multifabs to cell-centers for plotting 
-        mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, Ms);
-        MultiFab::Copy(Plt, H_demagfield[0], 0, 21, 1, 0);
-        MultiFab::Copy(Plt, H_demagfield[1], 0, 22, 1, 0);
-        MultiFab::Copy(Plt, H_demagfield[2], 0, 23, 1, 0);
-        MultiFab::Copy(Plt, PoissonRHS, 0, 24, 1, 0);
-        MultiFab::Copy(Plt, PoissonPhi, 0, 25, 1, 0);
+        //mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, Ms);
+        MultiFab::Copy(Plt, Ms, 0, 0, 1, 0);
+        MultiFab::Copy(Plt, Mfield[0], 0, 1, 1, 0);
+        MultiFab::Copy(Plt, Mfield[1], 0, 2, 1, 0);
+        MultiFab::Copy(Plt, Mfield[2], 0, 3, 1, 0);
+        MultiFab::Copy(Plt, H_biasfield[0], 0, 4, 1, 0);
+        MultiFab::Copy(Plt, H_biasfield[1], 0, 5, 1, 0);
+        MultiFab::Copy(Plt, H_biasfield[2], 0, 6, 1, 0);
+        MultiFab::Copy(Plt, H_exchangefield[0], 0, 7, 1, 0);
+        MultiFab::Copy(Plt, H_exchangefield[1], 0, 8, 1, 0);
+        MultiFab::Copy(Plt, H_exchangefield[2], 0, 9, 1, 0);
+        MultiFab::Copy(Plt, H_DMIfield[0], 0, 10, 1, 0);
+        MultiFab::Copy(Plt, H_DMIfield[1], 0, 11, 1, 0);
+        MultiFab::Copy(Plt, H_DMIfield[2], 0, 12, 1, 0);
+        MultiFab::Copy(Plt, H_anisotropyfield[0], 0, 13, 1, 0);
+        MultiFab::Copy(Plt, H_anisotropyfield[1], 0, 14, 1, 0);
+        MultiFab::Copy(Plt, H_anisotropyfield[2], 0, 15, 1, 0);
+        MultiFab::Copy(Plt, H_demagfield[0], 0, 16, 1, 0);
+        MultiFab::Copy(Plt, H_demagfield[1], 0, 17, 1, 0);
+        MultiFab::Copy(Plt, H_demagfield[2], 0, 18, 1, 0);
+        MultiFab::Copy(Plt, PoissonRHS, 0, 19, 1, 0);
+        MultiFab::Copy(Plt, PoissonPhi, 0, 20, 1, 0);
 
-        WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
-                                                "Mx_xface","Mx_yface","Mx_zface",
-                                                "My_xface", "My_yface", "My_zface",
-                                                "Mz_xface", "Mz_yface", "Mz_zface",
-                                                "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
-                                                "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
-                                                "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface",
+        WriteSingleLevelPlotfile(pltfile, Plt, {"Ms",
+                                                "Mx",
+                                                "My",
+                                                "Mz",
+                                                "Hx_bias",
+                                                "Hy_bias",
+                                                "Hz_bias",
+                                                "Hx_exchange",
+                                                "Hy_exchange",
+                                                "Hz_exchange",
+                                                "Hx_DMI",
+                                                "Hy_DMI",
+                                                "Hz_DMI",
+                                                "Hx_anisotropy",
+                                                "Hy_anisotropy",
+                                                "Hz_anisotropy",
                                                 "Hx_demagfield","Hy_demagfield","Hz_demagfield",
                                                 "PoissonRHS","PoissonPhi"},
                                                  geom, time, plt_step);
-
-
     }
 
     // copy new solution into old solution
-    for(int comp = 0; comp < 3; comp++)
-    {
-       MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
-       MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 3, Nghost);
-       MultiFab::Copy(Mfield_error[comp], Mfield[comp], 0, 0, 3, 0);
+    for(int comp = 0; comp < 3; comp++) {
+        MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
+        MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, Nghost);
+        MultiFab::Copy(Mfield_error[comp], Mfield[comp], 0, 0, 1, Nghost);
 
-       // fill periodic ghost cells
-       Mfield_old[comp].FillBoundary(geom.periodicity());
-       Mfield_prev_iter[comp].FillBoundary(geom.periodicity());
-       Mfield_error[comp].FillBoundary(geom.periodicity());
-
+        // fill periodic ghost cells
+        Mfield_old[comp].FillBoundary(geom.periodicity());
+        Mfield_prev_iter[comp].FillBoundary(geom.periodicity());
+        Mfield_error[comp].FillBoundary(geom.periodicity());
     }
 
+#ifdef USE_TIME_INTEGRATOR
     TimeIntegrator<Vector<MultiFab> > integrator(Mfield_old);
-    
-    for (int step = start_step; step <= nsteps; ++step)
-    {
+#endif 
 
+    for (int step = start_step; step <= nsteps; ++step) {
+        
         Real step_strt_time = ParallelDescriptor::second();
+        
+        if (TimeIntegratorOption == 1){ // first order forward Euler
+            
+            amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
 
-	if (TimeIntegratorOption == 1){ // first order forward Euler
-        amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
-
-    	   // Evolve H_demag
-           if(demag_coupling == 1)
-           {
-               //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-               //Compute RHS of Poisson equation
-               ComputePoissonRHS(PoissonRHS, Mfield_old, Ms, geom);
-
-               //Initial guess for phi
-               PoissonPhi.setVal(0.);
+    	    // Evolve H_demag
+            if(demag_coupling == 1) {
+                //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
+                //Compute RHS of Poisson equation
+                ComputePoissonRHS(PoissonRHS, Mfield_old, Ms, geom);
+                
+                //Initial guess for phi
+                PoissonPhi.setVal(0.);
 #ifdef NEUMANN
-               mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #else
-	       openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+	            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
 
-               // Calculate H from Phi
-               ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
-           }
+                // Calculate H from Phi
+                ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+            }
 
-           //Evolve M
+            if (exchange_coupling == 1){
+                CalculateH_exchange(Mfield_old, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+            }
 
-           // Compute f^n = f(M^n, H^n)
-           Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
+            if(DMI_coupling == 1){
+                CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+            }
 
-           // M^{n+1} = M^n + dt * f^n
-	   for(int i = 0; i < 3; i++){
-	      MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS[i], 0, 0, 3, 0);
-	   }
+            if(anisotropy_coupling == 1){
+                CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+            }
 
-           NormalizeM(Mfield, Ms, M_normalization);
+            //Evolve M
+            // Compute f^n = f(M^n, H^n)
+            Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
 
-           for(int comp = 0; comp < 3; comp++)
-           {
-              // fill periodic ghost cells
-              Mfield[comp].FillBoundary(geom.periodicity());
-           }
+            // M^{n+1} = M^n + dt * f^n
+	        for(int i = 0; i < 3; i++){
+                MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS[i], 0, 0, 1, 0);
+	        }
 
-           // copy new solution into old solution
-           for(int comp = 0; comp < 3; comp++)
-           {
-              MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
-
-              // fill periodic ghost cells
-              Mfield_old[comp].FillBoundary(geom.periodicity());
-
-           }
+            NormalizeM(Mfield, Ms, M_normalization);
+ 
+            for(int comp = 0; comp < 3; comp++)
+            {
+                // fill periodic ghost cells
+                Mfield[comp].FillBoundary(geom.periodicity());
+            }
+ 
+            // copy new solution into old solution
+            for(int comp = 0; comp < 3; comp++)
+            {
+                MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
+    
+                // fill periodic ghost cells
+                Mfield_old[comp].FillBoundary(geom.periodicity());
+ 
+            }
         } else if (TimeIntegratorOption == 2){ //2nd Order predictor-corrector
-        amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
+        
+            amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
 
-           Real M_tolerance = 1.e-6;
-           int iter = 0;
-           int stop_iter = 0;
+            Real M_tolerance = 1.e-6;
+            int iter = 0;
+            int stop_iter = 0;
 
-	   // Evolve H_demag (H^{n})
-	   if(demag_coupling == 1)
-	   {
-	      //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-	      //Compute RHS of Poisson equation
-	      ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
-
-	      //Initial guess for phi
-	      PoissonPhi.setVal(0.);
-
-#ifdef NEUMANN
-              mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-#else
-	      openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
-#endif
-
-	      // Calculate H from Phi
-	      ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
-	   }
-
-	   // Compute f^{n} = f(M^{n}, H^{n})
-	   Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
-
-           while(!stop_iter){
-
-  	      // Poisson solve and H_demag computation with M_field_pre
- 	      if(demag_coupling == 1)
-	      {
-		 //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-		 //Compute RHS of Poisson equation
-	         ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
-
-		 //Initial guess for phi
-		 PoissonPhi.setVal(0.);
+	        // Evolve H_demag (H^{n})
+	        if(demag_coupling == 1){
+                //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
+                //Compute RHS of Poisson equation
+                ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
+                
+                //Initial guess for phi
+                PoissonPhi.setVal(0.);
 
 #ifdef NEUMANN
-                 mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #else
-	         openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+	            openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
 
-		 // Calculate H from Phi
-		 ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
-	      }
+	            // Calculate H from Phi
+	            ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+	        }
 
-	      // LLG RHS with new H_demag and M_field_pre
-	      // Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
-	      Compute_LLG_RHS(LLG_RHS_pre, Mfield_prev_iter, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
+            if (exchange_coupling == 1){
+                CalculateH_exchange(Mfield_old, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+            }
+    
+            if(DMI_coupling == 1){
+                CalculateH_DMI(Mfield_old, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+            }
+    
+            if(anisotropy_coupling == 1){
+                CalculateH_anisotropy(Mfield_old, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+            }
+    
+	        // Compute f^{n} = f(M^{n}, H^{n})
+            Compute_LLG_RHS(LLG_RHS, Mfield_old, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
 
-	      // Corrector step update M
-	      // M^{n+1, *} = M^n + 0.5 * dt * (f^n + f^{n+1, *})
-	      for(int i = 0; i < 3; i++){
-		MultiFab::LinComb(LLG_RHS_avg[i], 0.5, LLG_RHS[i], 0, 0.5, LLG_RHS_pre[i], 0, 0, 3, 0);
-		MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS_avg[i], 0, 0, 3, 0);
-	      }
+            while(!stop_iter){
+                
+                // Poisson solve and H_demag computation with M_field_pre
+                if(demag_coupling == 1) {
+                    //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
+                    //Compute RHS of Poisson equation
+                    ComputePoissonRHS(PoissonRHS, Mfield_prev_iter, Ms, geom);
+    
+		            //Initial guess for phi
+		            PoissonPhi.setVal(0.);
 
-	      // Normalize M
-	      NormalizeM(Mfield, Ms, M_normalization);
-
-#if 1
-              for (MFIter mfi(Ms[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
-
-                  Array4<Real> const& Ms_xface = Ms[0].array(mfi);
-                  Array4<Real> const& Ms_yface = Ms[1].array(mfi);
-                  Array4<Real> const& Ms_zface = Ms[2].array(mfi);
-
-                  Array4<Real> const& Mfield_error_xface = Mfield_error[0].array(mfi);
-                  Array4<Real> const& Mfield_error_yface = Mfield_error[1].array(mfi);
-                  Array4<Real> const& Mfield_error_zface = Mfield_error[2].array(mfi);
-
-                  Array4<Real> const& Mfield_xface = Mfield[0].array(mfi);
-                  Array4<Real> const& Mfield_yface = Mfield[1].array(mfi);
-                  Array4<Real> const& Mfield_zface = Mfield[2].array(mfi);
-
-                  Array4<Real> const& Mfield_prev_iter_xface = Mfield_prev_iter[0].array(mfi);
-                  Array4<Real> const& Mfield_prev_iter_yface = Mfield_prev_iter[1].array(mfi);
-                  Array4<Real> const& Mfield_prev_iter_zface = Mfield_prev_iter[2].array(mfi);
-
-                  Box const &tbx = mfi.tilebox(IntVect(1,0,0));
-                  Box const &tby = mfi.tilebox(IntVect(0,1,0));
-                  Box const &tbz = mfi.tilebox(IntVect(0,0,1));
-
-                  amrex::ParallelFor(tbx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-                      if (Ms_xface(i,j,k) > 0) {
-                          for (int n=0; n<3; ++n) {
-                              Mfield_error_xface(i,j,k,n) = amrex::Math::abs(Mfield_xface(i,j,k,n) - Mfield_prev_iter_xface(i,j,k,n)) / Ms_xface(i,j,k);
-                          }
-                      } else {
-                          for (int n=0; n<3; ++n) {
-                              Mfield_error_xface(i,j,k,n) = 0.;
-                          }
-                      }
-                  });
-
-                  amrex::ParallelFor(tby, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-                      if (Ms_yface(i,j,k) > 0) {
-                          for (int n=0; n<3; ++n) {
-                              Mfield_error_yface(i,j,k,n) = amrex::Math::abs(Mfield_yface(i,j,k,n) - Mfield_prev_iter_yface(i,j,k,n)) / Ms_yface(i,j,k);
-                          }
-                      } else {
-                          for (int n=0; n<3; ++n) {
-                              Mfield_error_yface(i,j,k,n) = 0.;
-                          }
-                      }
-                  });
-
-                  amrex::ParallelFor(tbz, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-                      if (Ms_zface(i,j,k) > 0) {
-                          for (int n=0; n<3; ++n) {
-                              Mfield_error_zface(i,j,k,n) = amrex::Math::abs(Mfield_zface(i,j,k,n) - Mfield_prev_iter_zface(i,j,k,n)) / Ms_zface(i,j,k);
-                          }
-                      } else {
-                          for (int n=0; n<3; ++n) {
-                              Mfield_error_zface(i,j,k,n) = 0.;
-                          }
-                      }
-                  });
-
-              }
-
-              amrex::Real M_mag_error_max = -1.;
-              for (int face = 0; face < 3; face++){
-                  for (int comp = 0; comp < 3; comp++){
-                      Real M_iter_error = Mfield_error[face].norm0(comp);
-                      if (M_iter_error >= M_mag_error_max){
-                          M_mag_error_max = M_iter_error;
-                      }
-                  }
-              }
-
+#ifdef NEUMANN
+                    mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #else
-	      Real M_mag_error_max = -1.;
-	      for(int face = 0; face < 3; face++){
- 		 for(int comp = 0; comp < 3; comp++){
-		    MultiFab::Copy(Mfield_error[face], Mfield[face], 0, 0, 3, 0);
-		    MultiFab::Subtract(Mfield_error[face], Mfield_prev_iter[face], 0, 0, 3, 0);
-		    Real M_mag_error = Mfield_error[face].norm0(comp)/Mfield[face].norm0(comp);
-		    if (M_mag_error >= M_mag_error_max){
-		       M_mag_error_max = M_mag_error;
-		    }
-		 }
-	      }
+                    openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
 
-	      // copy new solution into Mfield_pre_iter
-	      for(int comp = 0; comp < 3; comp++)
-	      {
-	         MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 3, Nghost);
-		 // fill periodic ghost cells
-		 Mfield_prev_iter[comp].FillBoundary(geom.periodicity());
-	      }
+		            // Calculate H from Phi
+                    ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+                }
+    
+                if (exchange_coupling == 1){
+                    CalculateH_exchange(Mfield_prev_iter, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                }
+        
+                if(DMI_coupling == 1){
+                    CalculateH_DMI(Mfield_prev_iter, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                }
+    
+                if(anisotropy_coupling == 1){
+                    CalculateH_anisotropy(Mfield_prev_iter, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+                }
+    
+	            // LLG RHS with new H_demag and M_field_pre
+	            // Compute f^{n+1, *} = f(M^{n+1, *}, H^{n+1, *})
+                Compute_LLG_RHS(LLG_RHS_pre, Mfield_prev_iter, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, M_normalization, mu0, geom, time);
+    
+	            // Corrector step update M
+	            // M^{n+1, *} = M^n + 0.5 * dt * (f^n + f^{n+1, *})
+	            for(int i = 0; i < 3; i++){
+                    MultiFab::LinComb(LLG_RHS_avg[i], 0.5, LLG_RHS[i], 0, 0.5, LLG_RHS_pre[i], 0, 0, 1, 0);
+                    MultiFab::LinComb(Mfield[i], 1.0, Mfield_old[i], 0, dt, LLG_RHS_avg[i], 0, 0, 1, 0);
+                }
 
-	      iter = iter + 1;
+	            // Normalize M
+	            NormalizeM(Mfield, Ms, M_normalization);
 
-	      amrex::Print() << "iter = " << iter << ", M_mag_error_max = " << M_mag_error_max << "\n";
-	      if (M_mag_error_max <= M_tolerance) stop_iter = 1;
+                for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+     
+                    const Box& bx = mfi.validbox();
+    
+                    Array4<Real> const& Ms_arr = Ms.array(mfi);
+    
+                    Array4<Real> const& Mx_error = Mfield_error[0].array(mfi);
+                    Array4<Real> const& My_error = Mfield_error[1].array(mfi);
+                    Array4<Real> const& Mz_error = Mfield_error[2].array(mfi);
+                    Array4<Real> const& Mx = Mfield[0].array(mfi);
+                    Array4<Real> const& My = Mfield[1].array(mfi);
+                    Array4<Real> const& Mz = Mfield[2].array(mfi);
+                    Array4<Real> const& Mx_prev_iter = Mfield_prev_iter[0].array(mfi);
+                    Array4<Real> const& My_prev_iter = Mfield_prev_iter[1].array(mfi);
+                    Array4<Real> const& Mz_prev_iter = Mfield_prev_iter[2].array(mfi);
+    
+                    amrex::ParallelFor(bx, [=] AMREX_GPU_DEVICE(int i, int j, int k) {
+                        if (Ms_arr(i,j,k) > 0) {
+                            Mx_error(i,j,k) = amrex::Math::abs(Mx(i,j,k) - Mx_prev_iter(i,j,k)) / Ms_arr(i,j,k);
+                            My_error(i,j,k) = amrex::Math::abs(My(i,j,k) - My_prev_iter(i,j,k)) / Ms_arr(i,j,k);
+                            Mz_error(i,j,k) = amrex::Math::abs(Mz(i,j,k) - Mz_prev_iter(i,j,k)) / Ms_arr(i,j,k);
+                        } else {
+                            Mx_error(i,j,k) = 0.;
+                            My_error(i,j,k) = 0.;
+                            Mz_error(i,j,k) = 0.;
+                        }
+                    });
+                }
+    
+                amrex::Real M_mag_error_max = -1.;
+                M_mag_error_max = std::max(Mfield_error[0].norm0(), Mfield_error[1].norm0());
+                M_mag_error_max = std::max(M_mag_error_max, Mfield_error[2].norm0());
 
-	   } // while stop_iter
+	            // copy new solution into Mfield_pre_iter
+	            for(int comp = 0; comp < 3; comp++) {
+                    MultiFab::Copy(Mfield_prev_iter[comp], Mfield[comp], 0, 0, 1, Nghost);
+                    // fill periodic ghost cells 
+                    Mfield_prev_iter[comp].FillBoundary(geom.periodicity());
+	            }
+    
+	            iter = iter + 1;
+    
+	            amrex::Print() << "iter = " << iter << ", M_mag_error_max = " << M_mag_error_max << "\n";
+	            if (M_mag_error_max <= M_tolerance) stop_iter = 1;
 
-           // copy new solution into old solution
-           for (int comp = 0; comp < 3; comp++)
-           {
- 	      MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
-	      // fill periodic ghost cells
-	      Mfield_old[comp].FillBoundary(geom.periodicity());
-           }
+	        } // while stop_iter
 
+            // copy new solution into old solution
+            for (int comp = 0; comp < 3; comp++){
+                MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
+                // fill periodic ghost cells
+                Mfield_old[comp].FillBoundary(geom.periodicity());
+            }
+    
         } else if (TimeIntegratorOption == 3) { // artemis way
-        amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
+        
+            amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
 
-            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt);
-
+            EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
 
         }  else if (TimeIntegratorOption == 4) { // amrex and sundials integrators
-        amrex::Print() << "TimeIntegratorOption = SUNDIALS" << "\n";
 
-	    // Create a RHS source function we will integrate
-            auto source_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& old_state, const Real /*time*/){
+#ifdef USE_TIME_INTEGRATOR
+            amrex::Print() << "TimeIntegratorOption = SUNDIALS" << "\n";
 
-                 // User function to calculate the rhs MultiFab given the state MultiFab
-                 for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-                     rhs[idim].setVal(0.);
-                 } 
+	        // Create a RHS source function we will integrate
+            auto source_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& old_state, const Real ){
+
+                // User function to calculate the rhs MultiFab given the state MultiFab
+                for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
+                    rhs[idim].setVal(0.);
+                } 
  
-    	         // Evolve H_demag
-                 if(demag_coupling == 1)
-                 {
-                     //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
-                     //Compute RHS of Poisson equation
-                     ComputePoissonRHS(PoissonRHS, old_state, Ms, geom);
+    	        // Evolve H_demag
+                if(demag_coupling == 1) {
+                    //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
+                    //Compute RHS of Poisson equation
+                    ComputePoissonRHS(PoissonRHS, old_state, Ms, geom);
                      
-                     //Initial guess for phi
-                     PoissonPhi.setVal(0.);
+                    //Initial guess for phi
+                    PoissonPhi.setVal(0.);
 #ifdef NEUMANN
-                     mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+                    mlmg.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #else
-	             openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
+	                openbc.solve({&PoissonPhi}, {&PoissonRHS}, 1.e-10, -1);
 #endif
-    
-                     // Calculate H from Phi
-                     ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
-                 }
+                    // Calculate H from Phi
+                    ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+                }
 
-                 // Compute f^n = f(M^n, H^n) 
-                 Compute_LLG_RHS(rhs, old_state, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
+                if (exchange_coupling == 1){
+                    CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                }
+
+                if(DMI_coupling == 1){
+                    CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+                }
+
+                if(anisotropy_coupling == 1){
+                    CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+                }
+
+                // Compute f^n = f(M^n, H^n) 
+                Compute_LLG_RHS(rhs, old_state, H_demagfield, H_biasfield, alpha, Ms, gamma, exchange, anisotropy, demag_coupling, exchange_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, time);
             };
 
-	    // Create a function to call after updating a state
-            auto post_update_fun = [&](Vector<MultiFab>& state, const Real /*time*/) {
-                 // Call user function to update state MultiFab, e.g. fill BCs
-                 NormalizeM(state, Ms, M_normalization);
+	        // Create a function to call after updating a state
+            auto post_update_fun = [&](Vector<MultiFab>& state, const Real ) {
+                // Call user function to update state MultiFab, e.g. fill BCs
+                NormalizeM(state, Ms, M_normalization);
 
-                 for(int comp = 0; comp < 3; comp++)
-                 {
+                for(int comp = 0; comp < 3; comp++){
                     // fill periodic ghost cells
                     state[comp].FillBoundary(geom.periodicity());
-                 }
+                }
 
                 //post_update(Mfield_old, time, geom);
             };
 
-	    // Attach the right hand side and post-update functions
+	        // Attach the right hand side and post-update functions
             // to the integrator
             integrator.set_rhs(source_fun);
             integrator.set_post_update(post_update_fun);
  
-            
             // integrate forward one step from `time` by `dt` to fill S_new
             integrator.advance(Mfield_old, Mfield, time, dt);
+#endif
 
-        }  else {
+        } else {
             amrex::Abort("Time integrator order not recognized");
         }
 
-	// copy new solution into old solution
-        for(int comp = 0; comp < 3; comp++)
-        {
-           MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 3, Nghost);
+	    // copy new solution into old solution
+        for(int comp = 0; comp < 3; comp++) {
+            MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
 
-           // fill periodic ghost cells
-           Mfield_old[comp].FillBoundary(geom.periodicity());
-
+            // fill periodic ghost cells
+            Mfield_old[comp].FillBoundary(geom.periodicity());
         }
 
-	Real step_stop_time = ParallelDescriptor::second() - step_strt_time;
+	    Real step_stop_time = ParallelDescriptor::second() - step_strt_time;
         ParallelDescriptor::ReduceRealMax(step_stop_time);
 
         amrex::Print() << "Advanced step " << step << " in " << step_stop_time << " seconds\n";
@@ -785,35 +770,57 @@ void main_main ()
         time = time + dt;
 
         // Write a plotfile of the data if plot_int > 0
-        if (plot_int > 0 && step%plot_int == 0)
-        {
+        if (plot_int > 0 && step%plot_int == 0) {
             const std::string& pltfile = amrex::Concatenate("plt",step,8);
 
-            //Averaging face-centerd Multifabs to cell-centers for plotting 
-            mf_avg_fc_to_cc(Plt, Mfield, H_biasfield, Ms);
-            MultiFab::Copy(Plt, H_demagfield[0], 0, 21, 1, 0);
-            MultiFab::Copy(Plt, H_demagfield[1], 0, 22, 1, 0);
-            MultiFab::Copy(Plt, H_demagfield[2], 0, 23, 1, 0);
-            MultiFab::Copy(Plt, PoissonRHS, 0, 24, 1, 0);
-            MultiFab::Copy(Plt, PoissonPhi, 0, 25, 1, 0);
+            MultiFab::Copy(Plt, Ms, 0, 0, 1, 0);
+            MultiFab::Copy(Plt, Mfield[0], 0, 1, 1, 0);
+            MultiFab::Copy(Plt, Mfield[1], 0, 2, 1, 0);
+            MultiFab::Copy(Plt, Mfield[2], 0, 3, 1, 0);
+            MultiFab::Copy(Plt, H_biasfield[0], 0, 4, 1, 0);
+            MultiFab::Copy(Plt, H_biasfield[1], 0, 5, 1, 0);
+            MultiFab::Copy(Plt, H_biasfield[2], 0, 6, 1, 0);
+            MultiFab::Copy(Plt, H_exchangefield[0], 0, 7, 1, 0);
+            MultiFab::Copy(Plt, H_exchangefield[1], 0, 8, 1, 0);
+            MultiFab::Copy(Plt, H_exchangefield[2], 0, 9, 1, 0);
+            MultiFab::Copy(Plt, H_DMIfield[0], 0, 10, 1, 0);
+            MultiFab::Copy(Plt, H_DMIfield[1], 0, 11, 1, 0);
+            MultiFab::Copy(Plt, H_DMIfield[2], 0, 12, 1, 0);
+            MultiFab::Copy(Plt, H_anisotropyfield[0], 0, 13, 1, 0);
+            MultiFab::Copy(Plt, H_anisotropyfield[1], 0, 14, 1, 0);
+            MultiFab::Copy(Plt, H_anisotropyfield[2], 0, 15, 1, 0);
+            MultiFab::Copy(Plt, H_demagfield[0], 0, 16, 1, 0);
+            MultiFab::Copy(Plt, H_demagfield[1], 0, 17, 1, 0);
+            MultiFab::Copy(Plt, H_demagfield[2], 0, 18, 1, 0);
+            MultiFab::Copy(Plt, PoissonRHS, 0, 19, 1, 0);
+            MultiFab::Copy(Plt, PoissonPhi, 0, 20, 1, 0);
 
-            WriteSingleLevelPlotfile(pltfile, Plt, {"Ms_xface","Ms_yface","Ms_zface",
-                                                    "Mx_xface","Mx_yface","Mx_zface",
-                                                    "My_xface", "My_yface", "My_zface",
-                                                    "Mz_xface", "Mz_yface", "Mz_zface",
-                                                    "Hx_bias_xface", "Hx_bias_yface", "Hx_bias_zface",
-                                                    "Hy_bias_xface", "Hy_bias_yface", "Hy_bias_zface",
-                                                    "Hz_bias_xface", "Hz_bias_yface", "Hz_bias_zface",
+            WriteSingleLevelPlotfile(pltfile, Plt, {"Ms",
+                                                    "Mx",
+                                                    "My",
+                                                    "Mz",
+                                                    "Hx_bias",
+                                                    "Hy_bias",
+                                                    "Hz_bias",
+                                                    "Hx_exchange",
+                                                    "Hy_exchange",
+                                                    "Hz_exchange",
+                                                    "Hx_DMI",
+                                                    "Hy_DMI",
+                                                    "Hz_DMI",
+                                                    "Hx_anisotropy",
+                                                    "Hy_anisotropy",
+                                                    "Hz_anisotropy",
                                                     "Hx_demagfield","Hy_demagfield","Hz_demagfield",
                                                     "PoissonRHS","PoissonPhi"},
-                                                    geom, time, step);
+                                                     geom, time, step);
 
         }
 
-	// Write a checkpoint file if chk_int > 0
-	if (chk_int > 0 && step%chk_int == 0) {
-	  WriteCheckPoint(step,time,Mfield,H_biasfield,H_demagfield);
-	}
+	    // Write a checkpoint file if chk_int > 0
+	    if (chk_int > 0 && step%chk_int == 0) {
+            WriteCheckPoint(step,time,Mfield,H_biasfield,H_demagfield);
+	    }
 
         // MultiFab memory usage
         const int IOProc = ParallelDescriptor::IOProcessorNumber();
