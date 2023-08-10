@@ -1,4 +1,3 @@
-
 #include <AMReX_PlotFileUtil.H>
 #include <AMReX_ParmParse.H>
 #include <AMReX_MLABecLaplacian.H>
@@ -18,6 +17,7 @@
 #include "EvolveM.H"
 #include "EvolveM_2nd.H"
 #include "Checkpoint.H"
+#include "EnergyDensity.H"
 #ifdef USE_TIME_INTEGRATOR
 #include <AMReX_TimeIntegrator.H>
 #endif
@@ -232,6 +232,7 @@ void main_main ()
     // This defines a Geometry object
     Geometry geom;
     geom.define(domain, real_box, CoordSys::cartesian, is_periodic);
+    GpuArray<Real,AMREX_SPACEDIM> dd = geom.CellSizeArray();
 
     // Nghost = number of ghost cells for each array
     int Nghost = 1;
@@ -301,6 +302,28 @@ void main_main ()
 
     MultiFab Plt(ba, dm, 21, 0);
 
+    // initialize energy densities
+    MultiFab deltaE_Zeeman(ba, dm, Ncomp, 0);
+    MultiFab deltaE_demag(ba, dm, Ncomp, 0);
+    MultiFab deltaE_exchange(ba, dm, Ncomp, 0);
+    MultiFab deltaE_DMI(ba, dm, Ncomp, 0);
+    MultiFab deltaE_anisotropy(ba, dm, Ncomp, 0);
+    MultiFab deltaE_total(ba, dm, Ncomp, 0);
+
+    deltaE_Zeeman.setVal(0.);
+    deltaE_demag.setVal(0.);
+    deltaE_exchange.setVal(0.);
+    deltaE_DMI.setVal(0.);
+    deltaE_anisotropy.setVal(0.);
+    deltaE_total.setVal(0.);
+
+    Real totalE_Zeeman = 0.0;
+    Real totalE_demag = 0.0;
+    Real totalE_exchange = 0.0;
+    Real totalE_DMI = 0.0;
+    Real totalE_anisotropy = 0.0;
+    Real totalE = 0.0;
+
     //Solver for Poisson equation
     LPInfo info;
 #ifdef NEUMANN
@@ -366,6 +389,9 @@ void main_main ()
         //Initialize fields
         InitializeFields(Mfield, H_biasfield, Ms, prob_lo, prob_hi, geom);
 
+        CalculateEnergyDensity(deltaE_Zeeman, Mfield, H_biasfield, mu0);
+        deltaE_Zeeman.mult(2.0, 0); // Zeeman energy does not have 1/2 factor
+            
         if(demag_coupling == 1){ 
             //Solve Poisson's equation laplacian(Phi) = div(M) and get H_demagfield = -grad(Phi)
             //Compute RHS of Poisson equation
@@ -383,19 +409,37 @@ void main_main ()
 #endif
             // Calculate H from Phi
             ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+
+            CalculateEnergyDensity(deltaE_demag, Mfield, H_demagfield, mu0);
         }
 
         if (exchange_coupling == 1){
             CalculateH_exchange(Mfield, H_exchangefield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+            CalculateEnergyDensity(deltaE_exchange, Mfield, H_exchangefield, mu0);
         }
 
         if(DMI_coupling == 1){
             CalculateH_DMI(Mfield, H_DMIfield, Ms, exchange, DMI, exchange_coupling, DMI_coupling, mu0, geom);
+            CalculateEnergyDensity(deltaE_DMI, Mfield, H_DMIfield, mu0);
         }
 
         if(anisotropy_coupling == 1){
             CalculateH_anisotropy(Mfield, H_anisotropyfield, Ms, anisotropy, anisotropy_coupling, anisotropy_axis, mu0, geom);
+            CalculateEnergyDensity(deltaE_anisotropy, Mfield, H_anisotropyfield, mu0);
         }
+
+        MultiFab::Add(deltaE_total, deltaE_Zeeman, 0, 0, 1, 0);
+        MultiFab::Add(deltaE_total, deltaE_demag, 0, 0, 1, 0);
+        MultiFab::Add(deltaE_total, deltaE_exchange, 0, 0, 1, 0);
+        MultiFab::Add(deltaE_total, deltaE_DMI, 0, 0, 1, 0);
+        MultiFab::Add(deltaE_total, deltaE_anisotropy, 0, 0, 1, 0);
+
+        totalE_Zeeman = dd[0]*dd[1]*dd[2]*deltaE_Zeeman.sum(0);
+        totalE_demag = dd[0]*dd[1]*dd[2]*deltaE_demag.sum(0);
+        totalE_exchange = dd[0]*dd[1]*dd[2]*deltaE_exchange.sum(0);
+        totalE_DMI = dd[0]*dd[1]*dd[2]*deltaE_DMI.sum(0);
+        totalE_anisotropy = dd[0]*dd[1]*dd[2]*deltaE_anisotropy.sum(0);
+        totalE = dd[0]*dd[1]*dd[2]*deltaE_total.sum(0);
     }
 
     // Write a plotfile of the initial data if plot_int > 0
@@ -492,6 +536,7 @@ void main_main ()
 
                 // Calculate H from Phi
                 ComputeHfromPhi(PoissonPhi, H_demagfield, prob_lo, prob_hi, geom);
+                
             }
 
             if (exchange_coupling == 1){
@@ -522,7 +567,28 @@ void main_main ()
                 // fill periodic ghost cells
                 Mfield[comp].FillBoundary(geom.periodicity());
             }
- 
+
+            // Compute energy densities
+            CalculateEnergyDensity(deltaE_Zeeman, Mfield, H_biasfield, mu0);
+            deltaE_Zeeman.mult(2.0, 0); // Zeeman energy does not have 1/2 factor
+            CalculateEnergyDensity(deltaE_demag, Mfield, H_demagfield, mu0);
+            CalculateEnergyDensity(deltaE_exchange, Mfield, H_exchangefield, mu0);
+            CalculateEnergyDensity(deltaE_DMI, Mfield, H_DMIfield, mu0);
+            CalculateEnergyDensity(deltaE_anisotropy, Mfield, H_anisotropyfield, mu0);
+
+            MultiFab::Add(deltaE_total, deltaE_Zeeman, 0, 0, 1, 0);
+            MultiFab::Add(deltaE_total, deltaE_demag, 0, 0, 1, 0);
+            MultiFab::Add(deltaE_total, deltaE_exchange, 0, 0, 1, 0);
+            MultiFab::Add(deltaE_total, deltaE_DMI, 0, 0, 1, 0);
+            MultiFab::Add(deltaE_total, deltaE_anisotropy, 0, 0, 1, 0);
+
+            totalE_Zeeman = dd[0]*dd[1]*dd[2]*deltaE_Zeeman.sum(0);
+            totalE_demag = dd[0]*dd[1]*dd[2]*deltaE_demag.sum(0);
+            totalE_exchange = dd[0]*dd[1]*dd[2]*deltaE_exchange.sum(0);
+            totalE_DMI = dd[0]*dd[1]*dd[2]*deltaE_DMI.sum(0);
+            totalE_anisotropy = dd[0]*dd[1]*dd[2]*deltaE_anisotropy.sum(0);
+            totalE = dd[0]*dd[1]*dd[2]*deltaE_total.sum(0);
+
             // copy new solution into old solution
             for(int comp = 0; comp < 3; comp++)
             {
@@ -668,6 +734,27 @@ void main_main ()
 
 	        } // while stop_iter
 
+            // Compute energy densities
+            CalculateEnergyDensity(deltaE_Zeeman, Mfield, H_biasfield, mu0);
+            deltaE_Zeeman.mult(2.0, 0); // Zeeman energy does not have 1/2 factor
+            CalculateEnergyDensity(deltaE_demag, Mfield, H_demagfield, mu0);
+            CalculateEnergyDensity(deltaE_exchange, Mfield, H_exchangefield, mu0);
+            CalculateEnergyDensity(deltaE_DMI, Mfield, H_DMIfield, mu0);
+            CalculateEnergyDensity(deltaE_anisotropy, Mfield, H_anisotropyfield, mu0);
+            
+            MultiFab::Add(deltaE_total, deltaE_Zeeman, 0, 0, 1, 0);
+            MultiFab::Add(deltaE_total, deltaE_demag, 0, 0, 1, 0);
+            MultiFab::Add(deltaE_total, deltaE_exchange, 0, 0, 1, 0);
+            MultiFab::Add(deltaE_total, deltaE_DMI, 0, 0, 1, 0);
+            MultiFab::Add(deltaE_total, deltaE_anisotropy, 0, 0, 1, 0);
+
+            totalE_Zeeman = dd[0]*dd[1]*dd[2]*deltaE_Zeeman.sum(0);
+            totalE_demag = dd[0]*dd[1]*dd[2]*deltaE_demag.sum(0);
+            totalE_exchange = dd[0]*dd[1]*dd[2]*deltaE_exchange.sum(0);
+            totalE_DMI = dd[0]*dd[1]*dd[2]*deltaE_DMI.sum(0);
+            totalE_anisotropy = dd[0]*dd[1]*dd[2]*deltaE_anisotropy.sum(0);
+            totalE = dd[0]*dd[1]*dd[2]*deltaE_total.sum(0);
+
             // copy new solution into old solution
             for (int comp = 0; comp < 3; comp++){
                 MultiFab::Copy(Mfield_old[comp], Mfield[comp], 0, 0, 1, Nghost);
@@ -680,6 +767,27 @@ void main_main ()
             amrex::Print() << "TimeIntegratorOption = " << TimeIntegratorOption << "\n";
 
             EvolveM_2nd(Mfield, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, PoissonRHS, PoissonPhi, alpha, Ms, gamma, exchange, DMI, anisotropy, demag_coupling, exchange_coupling, DMI_coupling, anisotropy_coupling, anisotropy_axis, M_normalization, mu0, geom, prob_lo, prob_hi, dt, time);
+
+            // Compute energy densities
+            CalculateEnergyDensity(deltaE_Zeeman, Mfield, H_biasfield, mu0);
+            deltaE_Zeeman.mult(2.0, 0); // Zeeman energy does not have 1/2 factor
+            CalculateEnergyDensity(deltaE_demag, Mfield, H_demagfield, mu0);
+            CalculateEnergyDensity(deltaE_exchange, Mfield, H_exchangefield, mu0);
+            CalculateEnergyDensity(deltaE_DMI, Mfield, H_DMIfield, mu0);
+            CalculateEnergyDensity(deltaE_anisotropy, Mfield, H_anisotropyfield, mu0);
+
+            MultiFab::Add(deltaE_total, deltaE_Zeeman, 0, 0, 1, 0);
+            MultiFab::Add(deltaE_total, deltaE_demag, 0, 0, 1, 0);
+            MultiFab::Add(deltaE_total, deltaE_exchange, 0, 0, 1, 0);
+            MultiFab::Add(deltaE_total, deltaE_DMI, 0, 0, 1, 0);
+            MultiFab::Add(deltaE_total, deltaE_anisotropy, 0, 0, 1, 0);
+
+            totalE_Zeeman = dd[0]*dd[1]*dd[2]*deltaE_Zeeman.sum(0);
+            totalE_demag = dd[0]*dd[1]*dd[2]*deltaE_demag.sum(0);
+            totalE_exchange = dd[0]*dd[1]*dd[2]*deltaE_exchange.sum(0);
+            totalE_DMI = dd[0]*dd[1]*dd[2]*deltaE_DMI.sum(0);
+            totalE_anisotropy = dd[0]*dd[1]*dd[2]*deltaE_anisotropy.sum(0);
+            totalE = dd[0]*dd[1]*dd[2]*deltaE_total.sum(0);
 
         }  else if (TimeIntegratorOption == 4) { // amrex and sundials integrators
 
@@ -731,6 +839,27 @@ void main_main ()
             auto post_update_fun = [&](Vector<MultiFab>& state, const Real ) {
                 // Call user function to update state MultiFab, e.g. fill BCs
                 NormalizeM(state, Ms, M_normalization);
+
+                // Compute energy densities
+                CalculateEnergyDensity(deltaE_Zeeman, Mfield, H_biasfield, mu0);
+                deltaE_Zeeman.mult(2.0, 0); // Zeeman energy does not have 1/2 factor
+                CalculateEnergyDensity(deltaE_demag, Mfield, H_demagfield, mu0);
+                CalculateEnergyDensity(deltaE_exchange, Mfield, H_exchangefield, mu0);
+                CalculateEnergyDensity(deltaE_DMI, Mfield, H_DMIfield, mu0);
+                CalculateEnergyDensity(deltaE_anisotropy, Mfield, H_anisotropyfield, mu0);
+
+                MultiFab::Add(deltaE_total, deltaE_Zeeman, 0, 0, 1, 0);
+                MultiFab::Add(deltaE_total, deltaE_demag, 0, 0, 1, 0);
+                MultiFab::Add(deltaE_total, deltaE_exchange, 0, 0, 1, 0);
+                MultiFab::Add(deltaE_total, deltaE_DMI, 0, 0, 1, 0);
+                MultiFab::Add(deltaE_total, deltaE_anisotropy, 0, 0, 1, 0);
+
+                totalE_Zeeman = dd[0]*dd[1]*dd[2]*deltaE_Zeeman.sum(0);
+                totalE_demag = dd[0]*dd[1]*dd[2]*deltaE_demag.sum(0);
+                totalE_exchange = dd[0]*dd[1]*dd[2]*deltaE_exchange.sum(0);
+                totalE_DMI = dd[0]*dd[1]*dd[2]*deltaE_DMI.sum(0);
+                totalE_anisotropy = dd[0]*dd[1]*dd[2]*deltaE_anisotropy.sum(0);
+                totalE = dd[0]*dd[1]*dd[2]*deltaE_total.sum(0);
 
                 for(int comp = 0; comp < 3; comp++){
                     // fill periodic ghost cells
