@@ -51,8 +51,24 @@ void InitializeMagneticProperties(MultiFab&  alpha,
             Real y = prob_lo[1] + (j+0.5) * dx[1];
             Real z = prob_lo[2] + (k+0.5) * dx[2];
 
-            if (x > mag_lo[0]-ddx[0] && x < mag_hi[0]+ddx[0]){
-                if (y > mag_lo[1]-ddx[1] && y < mag_hi[1]+ddx[1]){
+            // if (x > mag_lo[0]-ddx[0] && x < mag_hi[0]+ddx[0]){
+            //     if (y > mag_lo[1]-ddx[1] && y < mag_hi[1]+ddx[1]){
+            //         if (z > mag_lo[2]-ddx[2] && z < mag_hi[2]+ddx[2]){
+            //             alpha_arr(i,j,k) = alpha_val;
+            //             gamma_arr(i,j,k) = gamma_val;
+            //             Ms_arr(i,j,k) = Ms_val;
+            //             exchange_arr(i,j,k) = exchange_val;
+            //             DMI_arr(i,j,k) = DMI_val;
+            //             anisotropy_arr(i,j,k) = anisotropy_val;
+            //             if (Ms_arr(i,j,k) < Ms_val) {
+            //                 printf("i= %d, j = %d, k = %d, Ms = %g \n", i, j, k, Ms_arr(i,j,k));
+            //             }
+            //             // amrex::Print() << "i=" << i << "j=" << j << "k=" << k << Ms_xface_arr(i,j,k) << "\n";
+            //         }
+            //     }
+            // }
+
+                if (sqrt(x*x + y*y) <= 50.0e-9){
                     if (z > mag_lo[2]-ddx[2] && z < mag_hi[2]+ddx[2]){
                         alpha_arr(i,j,k) = alpha_val;
                         gamma_arr(i,j,k) = gamma_val;
@@ -66,7 +82,6 @@ void InitializeMagneticProperties(MultiFab&  alpha,
                         // amrex::Print() << "i=" << i << "j=" << j << "k=" << k << Ms_xface_arr(i,j,k) << "\n";
                     }
                 }
-            }
         }); 
     }
     // fill periodic ghost cells for Ms. Used to calculate Ms_lo(hi)_x(y,z) for exchange field calculation
@@ -111,10 +126,13 @@ void InitializeFields(Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
                 Real x = prob_lo[0] + (i+0.5) * dx[0];
                 Real y = prob_lo[1] + (j+0.5) * dx[1];
                 Real z = prob_lo[2] + (k+0.5) * dx[2];
-               
-                Mx(i,j,k) = 0._rt;
-                My(i,j,k) = 0._rt;
-                Mz(i,j,k) = Ms_arr(i,j,k);
+                
+                Real pi = 3.14159265358979;
+                
+                Mx(i,j,k) = sin(pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k) * x/sqrt(x*x + y*y);
+                My(i,j,k) = sin(pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k) * y/sqrt(x*x + y*y);
+                // Mz(i,j,k) = (sqrt(x*x + y*y) <= 50.0e-9) ? Ms_arr(i,j,k):0.0;
+                Mz(i,j,k) = cos(pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k); // for the skyrmion state
                 Hx_bias(i,j,k) = 0._rt;         
                 Hy_bias(i,j,k) = 0._rt; 
                 Hz_bias(i,j,k) = 0._rt;
