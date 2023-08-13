@@ -789,6 +789,21 @@ void main_main ()
             totalE_anisotropy = dd[0]*dd[1]*dd[2]*deltaE_anisotropy.sum(0);
             totalE = dd[0]*dd[1]*dd[2]*deltaE_total.sum(0);
 
+            if (ParallelDescriptor::MyProc() == 0) {
+                std::string plotfilename = "TotalEnergy";
+                std::fstream ofs;
+                ofs.open(plotfilename, std::ios::app);
+                if (!ofs){
+                    std::ofstream ofs(plotfilename, std::ios::app);
+                    ofs << time << " " << totalE << std::endl;
+                    ofs.close();
+                }
+                else{
+                    ofs << time << " " << totalE << std::endl;
+                    ofs.close();
+                }
+            }
+
         }  else if (TimeIntegratorOption == 4) { // amrex and sundials integrators
 
 #ifdef USE_TIME_INTEGRATOR

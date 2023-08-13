@@ -1,3 +1,5 @@
+/* Only uniaxial (or interfacial) DMI terms are included */
+
 #include "CartesianAlgorithm.H"
 #include "EffectiveDMIField.H"
 #include <AMReX_MLMG.H> 

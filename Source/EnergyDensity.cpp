@@ -25,7 +25,7 @@ void CalculateEnergyDensity(
 
         amrex::ParallelFor(tbx,
             [=] AMREX_GPU_DEVICE(int i, int j, int k) {
-                dE(i,j,k) = -1/2*mu0*(Mx(i,j,k) * Hx_eff(i,j,k) + My(i,j,k) * Hy_eff(i,j,k) + Mz(i,j,k) * Hz_eff(i,j,k)) ;
+                dE(i,j,k) = -1.0/2.0*mu0*(Mx(i,j,k) * Hx_eff(i,j,k) + My(i,j,k) * Hy_eff(i,j,k) + Mz(i,j,k) * Hz_eff(i,j,k)) ;
             });
     }
 }
