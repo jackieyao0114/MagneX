@@ -129,10 +129,15 @@ void InitializeFields(Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
                 
                 Real pi = 3.14159265358979;
                 
-                Mx(i,j,k) = sin(pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k) * x/sqrt(x*x + y*y);
-                My(i,j,k) = sin(pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k) * y/sqrt(x*x + y*y);
+                // // quasi-uniform init
+                // Mx(i,j,k) = 0.0;
+                // My(i,j,k) = 0.0;
                 // Mz(i,j,k) = (sqrt(x*x + y*y) <= 50.0e-9) ? Ms_arr(i,j,k):0.0;
-                Mz(i,j,k) = cos(pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k); // for the skyrmion state
+
+                // 3-pi init
+                Mx(i,j,k) = sin(3*pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k) * x/sqrt(x*x + y*y);
+                My(i,j,k) = sin(3*pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k) * y/sqrt(x*x + y*y);
+                Mz(i,j,k) = cos(3*pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k); // for the skyrmion state
                 Hx_bias(i,j,k) = 0._rt;         
                 Hy_bias(i,j,k) = 0._rt; 
                 Hz_bias(i,j,k) = 0._rt;
