@@ -83,31 +83,30 @@ void CalculateH_exchange(
                             
                             xi_DMI = 2.0*exchange_arr(i,j,k)/DMI_arr(i,j,k);
 
-                            // dMxdx_BC_lo_x =  1.0/xi_DMI*M_xface(i,j,k,2) ; // lower x BC: dMx/dx = 1/xi*Mz
-                            // dMxdx_BC_hi_x = -1.0/xi_DMI*M_xface(i,j,k,2) ; // higher x BC: dMx/dx = -1/xi*Mz
+                            dMxdx_BC_lo_x = 0.0; // turn off DMI boundary condition for spin transport in infinite cycloid
+                            dMxdx_BC_hi_x = 0.0; // turn off DMI boundary condition for spin transport in infinite cycloid
+                            dMydy_BC_lo_y = 0.0; // turn off DMI boundary condition for spin transport in infinite cycloid
+                            dMydy_BC_hi_y = 0.0; // turn off DMI boundary condition for spin transport in infinite cycloid
 
-                            // dMydy_BC_lo_y =  1.0/xi_DMI*M_xface(i,j,k,2) ; // lower y BC: dMy/dy = 1/xi*Mz
-                            // dMydy_BC_hi_y = -1.0/xi_DMI*M_xface(i,j,k,2) ; // higher y BC: dMy/dy = -1/xi*Mz
+                            dMzdx_BC_lo_x = 0.0; // turn off DMI boundary condition for spin transport in infinite cycloid
+                            dMzdx_BC_hi_x = 0.0; // turn off DMI boundary condition for spin transport in infinite cycloid
+                            dMzdy_BC_lo_y = 0.0; // turn off DMI boundary condition for spin transport in infinite cycloid
+                            dMzdy_BC_hi_y = 0.0; // turn off DMI boundary condition for spin transport in infinite cycloid
 
-                            // dMzdx_BC_lo_x = -1.0/xi_DMI*M_xface(i,j,k,0);  // lower x BC: dMz/dx = -1/xi*Mx
-                            // dMzdx_BC_hi_x =  1.0/xi_DMI*M_xface(i,j,k,0);  // higher x BC: dMz/dx = 1/xi*Mx
-                            // dMzdy_BC_lo_y = -1.0/xi_DMI*M_xface(i,j,k,1);  // lower y BC: dMz/dy = -1/xi*My
-                            // dMzdy_BC_hi_y =  1.0/xi_DMI*M_xface(i,j,k,1);  // higher y BC: dMz/dy = 1/xi*My
+                            // // BC should not depend on the orientation of n
+                            // dMxdx_BC_lo_x = -1.0/xi_DMI*Mz(i,j,k); // lower x BC: dMx/dx = 1/xi*Mz
+                            // dMxdx_BC_hi_x = -1.0/xi_DMI*Mz(i,j,k); // higher x BC: dMx/dx = -1/xi*Mz
+                            // dMydy_BC_lo_y = -1.0/xi_DMI*Mz(i,j,k); // lower y BC: dMy/dy = 1/xi*Mz
+                            // dMydy_BC_hi_y = -1.0/xi_DMI*Mz(i,j,k); // higher y BC: dMy/dy = -1/xi*Mz
+                            // // dMydy_BC_lo_y = 0.0; // lower y BC hacked as free boundary
+                            // // dMydy_BC_hi_y = 0.0; // higher y BC hacked as free boundary
 
-                            // BC should not depend on the orientation of n
-                            dMxdx_BC_lo_x = -1.0/xi_DMI*Mz(i,j,k); // lower x BC: dMx/dx = 1/xi*Mz
-                            dMxdx_BC_hi_x = -1.0/xi_DMI*Mz(i,j,k); // higher x BC: dMx/dx = -1/xi*Mz
-                            dMydy_BC_lo_y = -1.0/xi_DMI*Mz(i,j,k); // lower y BC: dMy/dy = 1/xi*Mz
-                            dMydy_BC_hi_y = -1.0/xi_DMI*Mz(i,j,k); // higher y BC: dMy/dy = -1/xi*Mz
-                            // dMydy_BC_lo_y = 0.0; // lower y BC hacked as free boundary
-                            // dMydy_BC_hi_y = 0.0; // higher y BC hacked as free boundary
-
-                            dMzdx_BC_lo_x =  1.0/xi_DMI*Mx(i,j,k);  // lower x BC: dMz/dx = -1/xi*Mx
-                            dMzdx_BC_hi_x =  1.0/xi_DMI*Mx(i,j,k);  // higher x BC: dMz/dx = 1/xi*Mx
-                            dMzdy_BC_lo_y =  1.0/xi_DMI*My(i,j,k);  // lower y BC: dMz/dy = -1/xi*My
-                            dMzdy_BC_hi_y =  1.0/xi_DMI*My(i,j,k);  // higher y BC: dMz/dy = 1/xi*My
-                            // dMzdy_BC_lo_y =  0.0; // lower y BC hacked as free boundary
-                            // dMzdy_BC_hi_y =  0.0; // higher y BC hacked as free boundary
+                            // dMzdx_BC_lo_x =  1.0/xi_DMI*Mx(i,j,k);  // lower x BC: dMz/dx = -1/xi*Mx
+                            // dMzdx_BC_hi_x =  1.0/xi_DMI*Mx(i,j,k);  // higher x BC: dMz/dx = 1/xi*Mx
+                            // dMzdy_BC_lo_y =  1.0/xi_DMI*My(i,j,k);  // lower y BC: dMz/dy = -1/xi*My
+                            // dMzdy_BC_hi_y =  1.0/xi_DMI*My(i,j,k);  // higher y BC: dMz/dy = 1/xi*My
+                            // // dMzdy_BC_lo_y =  0.0; // lower y BC hacked as free boundary
+                            // // dMzdy_BC_hi_y =  0.0; // higher y BC hacked as free boundary
                         }
                         
                         Hx_exchange(i,j,k) = H_exchange_coeff * Laplacian_Mag(Mx, Ms_lo_x, Ms_hi_x, dMxdx_BC_lo_x, dMxdx_BC_hi_x, 

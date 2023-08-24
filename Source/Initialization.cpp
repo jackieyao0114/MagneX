@@ -129,13 +129,25 @@ void InitializeFields(Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
                 
                 Real pi = 3.14159265358979;
                 Real lambda = 62.0e-9; // cycloid period
+                Real theta_x = pi/4;
+                Real theta_z = 0.3041*pi;
+                Real phi_z = pi/4;
 
-                Mx(i,j,k) = sin(2*pi * x/lambda);
+                // Mx(i,j,k) = Ms_arr(i,j,k)* (sin(2*pi * x/lambda)*cos(theta_x) - cos(2*pi * x/lambda)*sin(theta_z)*cos(phi_z));
+                // My(i,j,k) = Ms_arr(i,j,k)* cos(2*pi * x/lambda)*sin(theta_z)*sin(phi_z);
+                // Mz(i,j,k) = Ms_arr(i,j,k)* (cos(2*pi * x/lambda)*cos(theta_z) + sin(2*pi * x/lambda)*sin(theta_x));
+
+                // Hx_bias(i,j,k) = 1.0e7 * (sin(2*pi * x/lambda)*cos(theta_x) - cos(2*pi * x/lambda)*sin(theta_z)*cos(phi_z));       
+                // Hy_bias(i,j,k) = 1.0e7 * cos(2*pi * x/lambda)*sin(theta_z)*sin(phi_z);
+                // Hz_bias(i,j,k) = 1.0e7 * (cos(2*pi * x/lambda)*cos(theta_z) + sin(2*pi * x/lambda)*sin(theta_x));
+
+                Mx(i,j,k) = Ms_arr(i,j,k)*sin(2*pi * x/lambda);
                 My(i,j,k) = 0.0;
-                Mz(i,j,k) = cos(2*pi * x/lambda);
-                Hx_bias(i,j,k) = 0._rt;         
-                Hy_bias(i,j,k) = 0._rt; 
-                Hz_bias(i,j,k) = 0._rt;
+                Mz(i,j,k) = Ms_arr(i,j,k)*cos(2*pi * x/lambda);
+
+                Hx_bias(i,j,k) = 1.0e7 * sin(2*pi * x/lambda);
+                Hy_bias(i,j,k) = 1.0e7 * 0.0;
+                Hz_bias(i,j,k) = 1.0e7 * cos(2*pi * x/lambda);
 
                 // Mx(i,j,k) = sin(pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k) * x/sqrt(x*x + y*y);
                 // My(i,j,k) = sin(pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k) * y/sqrt(x*x + y*y);

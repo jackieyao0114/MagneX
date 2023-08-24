@@ -1,0 +1,31 @@
+n_cell = 512 512 16
+max_grid_size = 512
+dt = 1.0e-15
+nsteps = 200000
+plot_int = 50
+
+TimeIntegratorOption = 3
+
+integration.type = 1
+integration.rk.type = 1
+
+prob_lo = -320.0e-9 -320.0e-9 -5.0e-9 # reduce to enable interfacial DMI
+prob_hi =  320.0e-9  320.0e-9  5.0e-9
+
+mag_lo = -320.0e-9 -320.0e-9 -5.0e-9
+mag_hi =  320.0e-9  320.0e-9  5.0e-9
+
+mu0 = 1.25663706212e-6 
+alpha_val = 0.0005
+Ms_val = 1.0e6 # unit is Ampere/m
+gamma_val = -1.759e11
+exchange_val = 16.0e-12 # unit is J/m
+DMI_val = -9.0e-4 # unit is J/m^2
+anisotropy_val = 3.0e4 # unit is J/m^3
+anisotropy_axis = 1.0 1.0 1.0
+
+demag_coupling = 0
+M_normalization = 1
+exchange_coupling = 1
+DMI_coupling = 1
+anisotropy_coupling = 1

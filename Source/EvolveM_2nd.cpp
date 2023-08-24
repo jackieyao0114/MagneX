@@ -321,6 +321,27 @@ void EvolveM_2nd(
                         amrex::Real Hy_eff_prev = Hy_bias(i,j,k);
                         amrex::Real Hz_eff_prev = Hz_bias(i,j,k);
 
+                        // cycloid spin validation
+                        Real x = prob_lo[0] + (i+0.5) * dx[0];
+                        Real y = prob_lo[1] + (j+0.5) * dx[1];
+                        amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
+                        amrex::Real frequency = 3.0e11; // frequency of input microwave H
+
+                        Real pi = 3.14159265358979;
+                        Real lambda = 62.0e-9; // cycloid period
+                        Real theta_x = pi/4;
+                        Real theta_z = 0.3041*pi;
+                        Real phi_z = pi/4;
+
+                        // Hx_bias(i,j,k) = 1.0e7 * (sin(2*pi * x/lambda)*cos(theta_x) - cos(2*pi * x/lambda)*sin(theta_z)*cos(phi_z));
+                        // Hy_bias(i,j,k) = 1.0e7 * cos(2*pi * x/lambda)*sin(theta_z)*sin(phi_z) + 5.0e6 * cos(2*3.141592653589793*frequency*time)*(z>=4.0e-9 && z<=5.5e-9)*(y>=-320.0e-9 && y<=-300.0e-9); // 
+                        // Hz_bias(i,j,k) = 1.0e7 * (cos(2*pi * x/lambda)*cos(theta_z) + sin(2*pi * x/lambda)*sin(theta_x));
+
+                        Hx_bias(i,j,k) = 1.0e7 * sin(2*pi * x/lambda) + 5.0e6 * cos(2*3.141592653589793*frequency*time)*(z>=4.0e-9 && z<=5.5e-9)*(x>=-320.0e-9 && x<=-300.0e-9); // 
+                        Hy_bias(i,j,k) = 1.0e7 * 0.0 + 5.0e6 * cos(2*3.141592653589793*frequency*time)*(z>=4.0e-9 && z<=5.5e-9)*(x>=-320.0e-9 && x<=-300.0e-9); // torque like is 5~10 times smaller than damping like
+                        Hz_bias(i,j,k) = 1.0e7 * cos(2*pi * x/lambda);
+
+
                         if (demag_coupling == 1){
                             // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy
 
@@ -526,5 +547,8 @@ void EvolveM_2nd(
         }
 
     } // end the iteration
+
+    // now let's calculate what is the net magnon
+    
 
 }
