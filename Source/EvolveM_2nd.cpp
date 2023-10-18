@@ -325,7 +325,8 @@ void EvolveM_2nd(
                         Real x = prob_lo[0] + (i+0.5) * dx[0];
                         Real y = prob_lo[1] + (j+0.5) * dx[1];
                         amrex::Real z = prob_lo[2] + (k+0.5) * dx[2];
-                        amrex::Real frequency = 3.0e11; // frequency of input microwave H
+                        amrex::Real frequency = 7.0e11; // frequency of input microwave H
+                        amrex::Real TP = 3.0/frequency; // width of gaussian pulse
 
                         Real pi = 3.14159265358979;
                         Real lambda = 62.0e-9; // cycloid period
@@ -337,10 +338,14 @@ void EvolveM_2nd(
                         // Hy_bias(i,j,k) = 1.0e7 * cos(2*pi * x/lambda)*sin(theta_z)*sin(phi_z) + 5.0e6 * cos(2*3.141592653589793*frequency*time)*(z>=4.0e-9 && z<=5.5e-9)*(y>=-320.0e-9 && y<=-300.0e-9); // 
                         // Hz_bias(i,j,k) = 1.0e7 * (cos(2*pi * x/lambda)*cos(theta_z) + sin(2*pi * x/lambda)*sin(theta_x));
 
-                        Hx_bias(i,j,k) = 1.0e7 * sin(2*pi * x/lambda) + 5.0e6 * cos(2*3.141592653589793*frequency*time)*(z>=4.0e-9 && z<=5.5e-9)*(x>=-320.0e-9 && x<=-300.0e-9); // 
-                        Hy_bias(i,j,k) = 1.0e7 * 0.0 + 5.0e6 * cos(2*3.141592653589793*frequency*time)*(z>=4.0e-9 && z<=5.5e-9)*(x>=-320.0e-9 && x<=-300.0e-9); // torque like is 5~10 times smaller than damping like
-                        Hz_bias(i,j,k) = 1.0e7 * cos(2*pi * x/lambda);
+                        // Very large dynamic excitation makes the magnon into heavily nonlinear regime
+                        // Hx_bias(i,j,k) = 1.0e7 * sin(2*pi * x/lambda) + 5.0e6 * cos(2*3.141592653589793*frequency*time)*(z>=4.0e-9 && z<=5.5e-9)*(x>=-320.0e-9 && x<=-300.0e-9); // 
+                        // Hy_bias(i,j,k) = 1.0e7 * 0.0 + 5.0e6 * cos(2*3.141592653589793*frequency*time)*(z>=4.0e-9 && z<=5.5e-9)*(x>=-320.0e-9 && x<=-300.0e-9); // torque like is 5~10 times smaller than damping like
+                        // Hz_bias(i,j,k) = 1.0e7 * cos(2*pi * x/lambda);
 
+                        Hx_bias(i,j,k) = 2.0e7 * sin(2*pi * x/lambda) + 5.0e2 * exp(-std::pow((time-3*TP), 2.)/(2*std::pow(TP, 2.))) * cos(2*3.141592653589793*frequency*time)*(z>=4.0e-9 && z<=5.5e-9)*(x>=-320.0e-9 && x<=-310.0e-9); // 
+                        Hy_bias(i,j,k) = 2.0e7 * 0.0 + 5.0e2 * exp(-std::pow((time-3*TP), 2.)/(2*std::pow(TP, 2.))) * cos(2*3.141592653589793*frequency*time)*(z>=4.0e-9 && z<=5.5e-9)*(x>=-320.0e-9 && x<=-310.0e-9); // torque like is 5~10 times smaller than damping like
+                        Hz_bias(i,j,k) = 2.0e7 * cos(2*pi * x/lambda);
 
                         if (demag_coupling == 1){
                             // H_eff = H_maxwell + H_bias + H_exchange + H_anisotropy

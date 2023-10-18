@@ -145,9 +145,9 @@ void InitializeFields(Array< MultiFab, AMREX_SPACEDIM >&  Mfield,
                 My(i,j,k) = 0.0;
                 Mz(i,j,k) = Ms_arr(i,j,k)*cos(2*pi * x/lambda);
 
-                Hx_bias(i,j,k) = 1.0e7 * sin(2*pi * x/lambda);
-                Hy_bias(i,j,k) = 1.0e7 * 0.0;
-                Hz_bias(i,j,k) = 1.0e7 * cos(2*pi * x/lambda);
+                Hx_bias(i,j,k) = 2.0e7 * sin(2*pi * x/lambda);
+                Hy_bias(i,j,k) = 2.0e7 * 0.0;
+                Hz_bias(i,j,k) = 2.0e7 * cos(2*pi * x/lambda);
 
                 // Mx(i,j,k) = sin(pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k) * x/sqrt(x*x + y*y);
                 // My(i,j,k) = sin(pi * sqrt(x*x + y*y) / 50.0e-9) * Ms_arr(i,j,k) * y/sqrt(x*x + y*y);
