@@ -21,8 +21,11 @@ Ms_val = 1.0e6 # unit is Ampere/m
 gamma_val = -1.759e11
 exchange_val = 16.0e-12 # unit is J/m
 DMI_val = -9.0e-4 # unit is J/m^2
-anisotropy_val = 3.0e4 # unit is J/m^3
-anisotropy_axis = 1.0 1.0 1.0
+anisotropy_val = 3.0e4 # unit is J/m^3 --- should be okay for BFO; remember to have a negative sign here to indicate hard axis
+anisotropy_axis = 1.0 1.0 1.0 # 001 should be the hard axis
+
+# anisotropy_val = -3.0e4 # unit is J/m^3 --- should be okay for BFO; remember to have a negative sign here to indicate hard axis
+# anisotropy_axis = 0.0 0.0 1.0 # 001 should be the hard axis
 
 demag_coupling = 0
 M_normalization = 1
