@@ -1,9 +1,6 @@
+#include "MagneX.H"
+
 #include "AMReX_PlotFileUtil.H"
-#include "AMReX_PlotFileDataImpl.H"
-
-#include <sys/stat.h>
-
-#include "Checkpoint.H"
 
 namespace {
     void GotoNextLine (std::istream& is)
@@ -17,7 +14,7 @@ void WriteCheckPoint(int step,
                      const amrex::Real time,
                      Array< MultiFab, AMREX_SPACEDIM>& Mfield,
                      Array< MultiFab, AMREX_SPACEDIM>& H_biasfield,
-		             Array< MultiFab, AMREX_SPACEDIM>& H_demagfield)
+                     Array< MultiFab, AMREX_SPACEDIM>& H_demagfield)
 {
     // timer for profiling
     BL_PROFILE_VAR("WriteCheckPoint()",WriteCheckPoint);

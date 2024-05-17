@@ -1,27 +1,16 @@
-#include "CartesianAlgorithm.H"
-#include "EffectiveExchangeField.H"
-#include <AMReX_MLMG.H> 
-#include <AMReX_MultiFab.H> 
-#include <AMReX_VisMF.H>
-#include <AMReX_OpenBC.H>
+#include "MagneX.H"
 
 using namespace amrex;
 
-void CalculateH_anisotropy(
-    Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
-    Array< MultiFab, AMREX_SPACEDIM> &   H_anisotropyfield,
-    MultiFab&   Ms,
-    MultiFab&   anisotropy,
-    int anisotropy_coupling,
-    amrex::GpuArray<amrex::Real, 3>& anisotropy_axis,
-    Real mu0,
-    const Geometry& geom
-)
+void CalculateH_anisotropy(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
+                           Array< MultiFab, AMREX_SPACEDIM> &   H_anisotropyfield,
+                           MultiFab&   Ms,
+                           MultiFab&   anisotropy)
 {
-    for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
+    // timer for profiling
+    BL_PROFILE_VAR("CalculateH_anisotropy()",CalculateH_anisotropy);
 
-        // extract dd from the geometry object
-        GpuArray<Real,AMREX_SPACEDIM> dd = geom.CellSizeArray();
+    for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
         const Box& bx = mfi.validbox();
 
@@ -46,7 +35,7 @@ void CalculateH_anisotropy(
                         // H_anisotropy 
                         amrex::Real M_dot_anisotropy_axis = 0.0;
                         M_dot_anisotropy_axis = Mx(i, j, k) * anisotropy_axis[0] + My(i, j, k) * anisotropy_axis[1] + Mz(i, j, k) * anisotropy_axis[2];
-                        amrex::Real const H_anisotropy_coeff = - 2.0 * anisotropy_arr(i,j,k) / mu0 / Ms_arr(i,j,k) / Ms_arr(i,j,k);
+                        amrex::Real const H_anisotropy_coeff = 2.0 * anisotropy_arr(i,j,k) / mu0 / Ms_arr(i,j,k) / Ms_arr(i,j,k);
                         Hx_anisotropy(i,j,k) = H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[0];
                         Hy_anisotropy(i,j,k) = H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[1];
                         Hz_anisotropy(i,j,k) = H_anisotropy_coeff * M_dot_anisotropy_axis * anisotropy_axis[2];
