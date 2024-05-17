@@ -1,13 +1,13 @@
-n_cell = 64 64 128
-max_grid_size_x = 32
-max_grid_size_y = 32
-max_grid_size_z = 32
+n_cell = 128 128 256
+max_grid_size_x = 64
+max_grid_size_y = 128
+max_grid_size_z = 128
 
 dt = 1.0e-14
-nsteps = 4
+nsteps = 3
 plot_int = 1
-chk_int = 1
-#restart = 3
+chk_int = -1
+restart = -1
 
 prob_lo = -3450.e-9 -3450.0e-9 -3450.0e-9
 prob_hi =  3450.e-9  3450.0e-9  3450.0e-9
@@ -47,7 +47,7 @@ TimeIntegratorOption = 1 #Forward Euler
 #TimeIntegratorOption = 3 #2nd order artemis way
 #TimeIntegratorOption = 4 #amrex/sundials backend integrators
 
-# tolerance threshold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
+# tolerance threhold (L_inf change between iterations) for TimeIntegrationOption 2 and 3
 iterative_tolerance = 1.e-9
 
 ## amrex/sundials backend integrators
