@@ -12,8 +12,8 @@ TimeIntegratorOption = 2
 integration.type = 1
 integration.rk.type = 1
 
-prob_lo = -64.0e-9 -64.0e-9 -2.0e-9
-prob_hi =  64.0e-9  64.0e-9  2.0e-9
+prob_lo = -50.0e-9 -50.0e-9 -1.0e-9
+prob_hi =  50.0e-9  50.0e-9  1.0e-9
 
 # mag_lo = -50.0e-9 -50.0e-9 -1.0e-9
 # mag_hi =  50.0e-9  50.0e-9  1.0e-9
