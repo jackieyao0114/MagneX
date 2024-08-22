@@ -13,7 +13,7 @@ void
 PrintUsage (const char* progName)
 {
     Print() << std::endl
-            << "Use this utility to extract a 1D profile along the x-axis of Mz and theta for a DMI skyrmion test." << std::endl << std::endl;
+            << "Use this utility to extract a 1D profile along the x-axis of Mz and report when Mz first crosses zero." << std::endl << std::endl;
     Print() << "Usage:" << '\n';
     Print() << progName << " infile=inputFileName" << '\n' << '\n';
 
@@ -117,13 +117,10 @@ main (int   argc,
             
             int k = (hi.z+1)/2;
             int j = (hi.y+1)/2;
-            for (auto i = (hi.x+1)/2; i <= hi.x; ++i) {
-                std::cout << i << " " << mfdata(i,j,k,3)/1.1e6 << " " << mfdata(i,j,k,16)+offset << "\n";
-                // 2pi cyclic fix
-                if (i<hi.x) {
-                    if (offset==0. && mfdata(i,j,k,16)>5. && mfdata(i+1,j,k,16)<1.) {
-                        offset = 2.*M_PI;
-                    }
+            for (auto i = (hi.x+1)/2; i < hi.x; ++i) {
+                if (mfdata(i,j,k,3) >= 0. && mfdata(i+1,j,k,3) < 0.) {
+                    amrex::Print() << "Crossing m_z=0 at r = " << (i-(hi.x+1)/2+1) * 7.8125e-10 * 1.e9 << " [nm]" << std::endl;
+                    break;
                 }
             }
            
