@@ -151,13 +151,13 @@ void main_main ()
         H_DMIfield[dir].define(ba, dm, 1, 0);
         H_anisotropyfield[dir].define(ba, dm, 1, 0);
         H_demagfield[dir].define(ba, dm, 1, 0);
-         
 	Heff[dir].define(ba, dm, 1, 1);
 
         // set to zero in case we don't include
         H_exchangefield[dir].setVal(0.);
         H_DMIfield[dir].setVal(0.);
         H_anisotropyfield[dir].setVal(0.);
+        H_demagfield[dir].setVal(0.);
         Heff[dir].setVal(0.);
 
         LLG_RHS[dir].define(ba, dm, 1, 0);
@@ -203,7 +203,6 @@ void main_main ()
         LLG_RHS[idim].setVal(0.);
         LLG_RHS_pre[idim].setVal(0.);
         LLG_RHS_avg[idim].setVal(0.);
-        H_demagfield[idim].setVal(0.);
     }
 
     // Create a zero-padded Magnetization field for the convolution method
@@ -268,22 +267,34 @@ void main_main ()
 
 #ifdef AMREX_USE_SUNDIALS
 
-    std::string theStrategy;
-    amrex::ParmParse pp("integration.sundials");
-    pp.get("strategy", theStrategy);
-    int using_MRI = theStrategy == "MRI" ? 1 : 0;
-    
+    int using_MRI = 0;
+    if (TimeIntegratorOption == 4) {
+
+        std::string theType1;
+        {
+            amrex::ParmParse pp("integration");
+            pp.get("type", theType1);
+        }
+        std::string theType2;
+        {
+            amrex::ParmParse pp("integration.sundials");
+            pp.get("type", theType2);
+        }
+
+        if (theType1 == "SUNDIALS") {
+            if (theType2 == "EX-MRI" || theType2 == "IM-MRI" || theType2 == "IMEX-MRI") {
+                using_MRI = 1;
+            }
+        }
+    }
+
     //alias Mfield and Mfield_old from Array<MultiFab, AMREX_SPACEDIM> into a vector of MultiFabs amrex::Vector<MultiFab>
-    //This is needed for sundials inetgrator ==> integrator.advance(vMfield_old, vMfield, time, dt)
+    //This is needed for sundials inetgrator ==> integrator.evolve
     amrex::Vector<MultiFab> vMfield(AMREX_SPACEDIM);
     for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
         vMfield[idim] = MultiFab(Mfield[idim],amrex::make_alias,0,Mfield[idim].nComp());
     }
-    amrex::Vector<MultiFab> vMfield_old(AMREX_SPACEDIM);
-    for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-        vMfield_old[idim] = MultiFab(Mfield_old[idim],amrex::make_alias,0,Mfield_old[idim].nComp());
-    }
-    TimeIntegrator<Vector<MultiFab> > integrator(vMfield_old, time);
+    TimeIntegrator<Vector<MultiFab> > integrator(vMfield, time);
 #endif 
 
     for (int step = start_step; step <= nsteps; ++step) {
@@ -503,12 +514,13 @@ void main_main ()
 #ifdef AMREX_USE_SUNDIALS
 	    // Create a RHS source function we will integrate
             // for MRI this represents the slow processes
-            auto rhs_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real ) {
-                
+            auto rhs_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real& time_in) {
+
+                BL_PROFILE_VAR("rhs_fun()",rhs_fun);
+
+                Print() << "Calling rhs_fun at time = " << time_in << "\n";
+
                 // User function to calculate the rhs MultiFab given the state MultiFab
-                for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-                    rhs[idim].setVal(0.);
-                } 
 
                 //alias rhs and state from vector of MultiFabs amrex::Vector<MultiFab> into Array<MultiFab, AMREX_SPACEDIM>
 		//This is needed since CalculateH_* and Compute_LLG_RHS function take Array<MultiFab, AMREX_SPACEDIM> as input param
@@ -521,31 +533,56 @@ void main_main ()
                                                                       MultiFab(state[1],amrex::make_alias,0,state[1].nComp()),
                                                                       MultiFab(state[2],amrex::make_alias,0,state[2].nComp()))};
 
-    	        // Evolve H_demag
-                if (demag_coupling == 1) {
-                    demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                // H_bias
+                if (using_MRI==0 || fast_H_bias==0) {
+                    ComputeHbias(H_biasfield, time_in, geom);
+                } else {
+                    for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                        H_biasfield[idim].setVal(0.);
+                    }
                 }
 
-                if (using_MRI) {
-
-                    // using MRI, set these processes to zero
-                    for (int d=0; d<AMREX_SPACEDIM; ++d) {
-                        H_exchangefield[d].setVal(0.);
-                        H_DMIfield[d].setVal(0.);
-                        H_anisotropyfield[d].setVal(0.);
-                    }
-                } else {
-
-                    if (exchange_coupling == 1) {
+                // exchange
+                if (exchange_coupling == 1) {
+                    if (using_MRI==0 || fast_exchange==0) {
                         CalculateH_exchange(ar_state, H_exchangefield, Ms, exchange, DMI, geom);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_exchangefield[idim].setVal(0.);
+                        }
                     }
+                }
 
-                    if (DMI_coupling == 1) {
+                // DMI
+                if (DMI_coupling == 1) {
+                    if (using_MRI==0 || fast_DMI==0) {
                         CalculateH_DMI(ar_state, H_DMIfield, Ms, exchange, DMI, geom);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_DMIfield[idim].setVal(0.);
+                        }
                     }
+                }
 
-                    if (anisotropy_coupling == 1) {
+                // anisotropy
+                if (anisotropy_coupling == 1) {
+                    if (using_MRI==0 || fast_anisotropy==0) {
                         CalculateH_anisotropy(ar_state, H_anisotropyfield, Ms, anisotropy);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_anisotropyfield[idim].setVal(.0);
+                        }
+                    }
+                }
+
+                // H_demag
+                if (demag_coupling == 1) {
+                    if (using_MRI==0 || fast_demag==0) {
+                        demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_demagfield[idim].setVal(0.);
+                        }
                     }
                 }
 
@@ -553,14 +590,14 @@ void main_main ()
                 Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
             };
 
-#if 0
             // Create a fast RHS source function we will integrate
-            auto rhs_fast_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& stage_data, const Vector<MultiFab>& state, const Real ) {
-                
+            auto rhs_fast_fun = [&](Vector<MultiFab>& rhs, const Vector<MultiFab>& state, const Real& time_in) {
+
+                BL_PROFILE_VAR("rhs_fast_fun()",rhs_fast_fun);
+
+                Print() << "Calling rhs_fast_fun at time = " << time_in << "\n";
+
                 // User function to calculate the rhs MultiFab given the state MultiFab
-                for (int idim = 0; idim < AMREX_SPACEDIM; ++idim) {
-                    rhs[idim].setVal(0.);
-                } 
 
 	        //alias rhs and state from vector of MultiFabs amrex::Vector<MultiFab> into Array<MultiFab, AMREX_SPACEDIM>
 		//This is needed since CalculateH_* and Compute_LLG_RHS function take Array<MultiFab, AMREX_SPACEDIM> as input param
@@ -573,33 +610,71 @@ void main_main ()
                                                                       MultiFab(state[1],amrex::make_alias,0,state[1].nComp()),
                                                                       MultiFab(state[2],amrex::make_alias,0,state[2].nComp()))};
 
-    	        // fast RHS does not have demag
-                if (demag_coupling == 1) {
-                    for (int d=0; d<AMREX_SPACEDIM; ++d) {
-                        H_demagfield[d].setVal(0.);
+                // H_bias
+                if (fast_H_bias==1) {
+                    ComputeHbias(H_biasfield, time_in, geom);
+                } else {
+                    for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                        H_biasfield[idim].setVal(0.);
+                    }
+                }
+                // exchange
+
+                if (exchange_coupling == 1) {
+                    if (fast_exchange==1) {
+                        CalculateH_exchange(ar_state, H_exchangefield, Ms, exchange, DMI, geom);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_exchangefield[idim].setVal(0.);
+                        }
                     }
                 }
 
-                if (exchange_coupling == 1) {
-                    CalculateH_exchange(ar_state, H_exchangefield, Ms, exchange, DMI, geom);
-                }
-
+                // DMI
                 if (DMI_coupling == 1) {
-                    CalculateH_DMI(ar_state, H_DMIfield, Ms, exchange, DMI, geom);
+                    if (fast_DMI==1) {
+                        CalculateH_DMI(ar_state, H_DMIfield, Ms, exchange, DMI, geom);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_DMIfield[idim].setVal(0.);
+                        }
+                    }
                 }
 
+                // anisotropy
                 if (anisotropy_coupling == 1) {
-                    CalculateH_anisotropy(ar_state, H_anisotropyfield, Ms, anisotropy);
+                    if (fast_anisotropy==1) {
+                        CalculateH_anisotropy(ar_state, H_anisotropyfield, Ms, anisotropy);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_anisotropyfield[idim].setVal(.0);
+                        }
+                    }
                 }
-		
+
+                // H_demag
+                if (demag_coupling == 1) {
+                    if (fast_demag==1) {
+                        demag_solver.CalculateH_demag(ar_state, H_demagfield);
+                    } else {
+                        for (int idim=0; idim<AMREX_SPACEDIM; ++idim) {
+                            H_demagfield[idim].setVal(0.);
+                        }
+                    }
+                }
+
                 // Compute f^n = f(M^n, H^n) 
                 Compute_LLG_RHS(ar_rhs, ar_state, H_demagfield, H_biasfield, H_exchangefield, H_DMIfield, H_anisotropyfield, alpha, Ms, gamma);
+
             };
-#endif
 
             // Create a function to call after updating a state
-            auto post_update_fun = [&](Vector<MultiFab>& state, const Real ) {
-               
+            auto post_update_fun = [&](Vector<MultiFab>& state, const Real& time_in) {
+
+                BL_PROFILE_VAR("post_update_fun()",post_update_fun);
+
+                Print() << "Calling post_update_fun at time = " << time_in << "\n";
+
                 Array<MultiFab, AMREX_SPACEDIM> ar_state{AMREX_D_DECL(MultiFab(state[0],amrex::make_alias,0,state[0].nComp()),
 		                                                      MultiFab(state[1],amrex::make_alias,0,state[1].nComp()),
 			       			                      MultiFab(state[2],amrex::make_alias,0,state[2].nComp()))};
@@ -608,22 +683,27 @@ void main_main ()
                 NormalizeM(ar_state, Ms, geom);
             };
 
-            // Attach the right hand side and post-update functions
-            // to the integrator
-            integrator.set_rhs(rhs_fun);
-            integrator.set_post_step_action(post_update_fun);
-//            integrator.set_fast_rhs(rhs_fast_fun);
-
-            // This sets the ratio of slow timestep size to fast timestep size as an integer,
-            // or equivalently, the number of fast timesteps per slow timestep.
-//            integrator.set_slow_fast_timestep_ratio(10);
+            // attach the right hand side, time step, and post-update functions to the integrator
 
             integrator.set_time_step(dt);
+            integrator.set_rhs(rhs_fun);
+            // not sure if we want this
+            //integrator.set_post_stage_action(post_update_fun);
+            integrator.set_post_step_action(post_update_fun);
 
-            // integrate forward one step from `time` by `dt` to fill S_new
-            integrator.advance(vMfield_old, vMfield, time, dt);
 
-            
+            if (using_MRI) {
+                integrator.set_fast_time_step(fast_dt_ratio*dt);
+                integrator.set_fast_rhs(rhs_fast_fun);
+                // not sure if we want this
+                //integrator.set_post_fast_stage_action(post_update_fun);
+                // not sure if we want this
+                //integrator.set_post_fast_step_action(post_update_fun);
+            }
+
+            // integrate forward one step to "time + dt" to fill S_new
+            integrator.evolve(vMfield, time+dt);
+
 #else
             amrex::Abort("Trying to use TimeIntegratorOption == 4 but complied with USE_SUNDIALS=FALSE; make realclean and then recompile with USE_SUNDIALS=TRUE");
 #endif
