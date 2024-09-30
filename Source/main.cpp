@@ -211,11 +211,11 @@ void main_main ()
     if (demag_coupling == 1) {
 
         const Real* dx = geom.CellSize();
-        if (dx[0] != dx[1]) {
+        if (!almostEqual(dx[0], dx[1], 10)) {
             Abort("Demag requires dx=dy");
         }
 #if (AMREX_SPACEDIM==3)
-        if (dx[0] != dx[2]) {
+        if (!almostEqual(dx[0], dx[2], 10)) {
             Abort("Demag requires dx=dy=dz");
         }
 #endif
