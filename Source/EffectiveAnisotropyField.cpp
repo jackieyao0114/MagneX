@@ -12,7 +12,7 @@ void CalculateH_anisotropy(Array< MultiFab, AMREX_SPACEDIM> &   Mfield,
 
     for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
-        const Box& bx = mfi.validbox();
+        const Box& bx = mfi.tilebox();
 
         const Array4<Real>& Mx = Mfield[0].array(mfi); 
         const Array4<Real>& My = Mfield[1].array(mfi); 

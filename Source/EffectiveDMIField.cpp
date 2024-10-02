@@ -16,7 +16,7 @@ void CalculateH_DMI(std::array< MultiFab, AMREX_SPACEDIM> &   Mfield,
     // calculate the b_temp_static, a_temp_static
     for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
 
-        const Box& bx = mfi.validbox();
+        const Box& bx = mfi.tilebox();
 
         // extract dd from the geometry object
         GpuArray<Real,AMREX_SPACEDIM> dd = geom.CellSizeArray();

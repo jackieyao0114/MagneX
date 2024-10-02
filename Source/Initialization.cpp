@@ -50,9 +50,9 @@ void InitializeMagneticProperties(MultiFab& Ms,
     gamma_parser.registerVariables({"x","y","z"});
     auto gamma_p = gamma_parser.compile<3>();
 
-    for (MFIter mfi(gamma); mfi.isValid(); ++mfi)
+    for (MFIter mfi(gamma,TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
-        const Box& bx = mfi.validbox(); // no ghost cells
+        const Box& bx = mfi.tilebox(); // no ghost cells
 
         const Array4<Real>& gamma_arr = gamma.array(mfi);
 
@@ -74,9 +74,9 @@ void InitializeMagneticProperties(MultiFab& Ms,
         exchange_parser.registerVariables({"x","y","z"});
         auto exchange_p = exchange_parser.compile<3>();
 
-        for (MFIter mfi(exchange); mfi.isValid(); ++mfi)
+        for (MFIter mfi(exchange,TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
-            const Box& bx = mfi.validbox(); // no ghost cells
+            const Box& bx = mfi.tilebox(); // no ghost cells
 
             const Array4<Real>& exchange_arr = exchange.array(mfi);
 
@@ -99,9 +99,9 @@ void InitializeMagneticProperties(MultiFab& Ms,
         DMI_parser.registerVariables({"x","y","z"});
         auto DMI_p = DMI_parser.compile<3>();
     
-        for (MFIter mfi(DMI); mfi.isValid(); ++mfi)
+        for (MFIter mfi(DMI,TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
-            const Box& bx = mfi.validbox(); // no ghost cells
+            const Box& bx = mfi.tilebox(); // no ghost cells
 
             const Array4<Real>& DMI_arr = DMI.array(mfi);
 
@@ -124,9 +124,9 @@ void InitializeMagneticProperties(MultiFab& Ms,
         anisotropy_parser.registerVariables({"x","y","z"});
         auto anisotropy_p = anisotropy_parser.compile<3>();
 
-        for (MFIter mfi(anisotropy); mfi.isValid(); ++mfi)
+        for (MFIter mfi(anisotropy,TilingIfNotGPU()); mfi.isValid(); ++mfi)
         {
-            const Box& bx = mfi.validbox(); // no ghost cells
+            const Box& bx = mfi.tilebox(); // no ghost cells
 
             const Array4<Real>& anisotropy_arr = anisotropy.array(mfi);
 
@@ -270,9 +270,9 @@ void ComputeAlpha(MultiFab&  alpha,
     auto alpha_p = alpha_parser.compile<4>();
     
     // loop over boxes
-    for (MFIter mfi(alpha); mfi.isValid(); ++mfi)
+    for (MFIter mfi(alpha,TilingIfNotGPU); mfi.isValid(); ++mfi)
     {
-        const Box& bx = mfi.validbox();
+        const Box& bx = mfi.tilebox();
 
         const Array4<Real>& alpha_arr = alpha.array(mfi);
 

@@ -448,7 +448,7 @@ void main_main ()
                 
                 for (MFIter mfi(Mfield[0], TilingIfNotGPU()); mfi.isValid(); ++mfi) {
      
-                    const Box& bx = mfi.validbox();
+                    const Box& bx = mfi.tilebox();
     
                     Array4<Real> const& Ms_arr = Ms.array(mfi);
     

@@ -173,7 +173,7 @@ Real ExchangeEnergy(Array< MultiFab, AMREX_SPACEDIM>& Mfield,
         // extract dd from the geometry object
         GpuArray<Real,AMREX_SPACEDIM> dd = geom.CellSizeArray();	   
     
-	const Box& bx = mfi.validbox();
+	const Box& bx = mfi.tilebox();
 
         auto const& Mx = Mfield[0].array(mfi);
         auto const& My = Mfield[1].array(mfi);

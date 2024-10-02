@@ -141,9 +141,9 @@ void Demagnetization::define()
     Real prefactor = 1. / 4. / 3.14159265;
 
     // Loop through demag tensor and fill with values
-    for (MFIter mfi(Kxx); mfi.isValid(); ++mfi)
+    for (MFIter mfi(Kxx,TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
-        const Box& bx = mfi.validbox();
+        const Box& bx = mfi.tilebox();
 
 	// extract dx from the geometry object
         GpuArray<Real,AMREX_SPACEDIM> dx = geom_large.CellSizeArray();
@@ -382,9 +382,9 @@ void Demagnetization::CalculateH_demag(Array<MultiFab, AMREX_SPACEDIM>& Mfield,
 	H_dft_imag_z.define(ba_fft, dm_large, 1, 0);
     }
 
-    for ( MFIter mfi(Kxx_fft_real); mfi.isValid(); ++mfi )
+    for ( MFIter mfi(Kxx_fft_real,TilingIfNotGPU()); mfi.isValid(); ++mfi )
     {
-	const Box& bx = mfi.validbox();
+	const Box& bx = mfi.tilebox();
 	
 	// Declare 6 pointers to the real and imaginary parts of the dft of M in each dimension
 	const Array4<Real>& Mx_real = M_dft_real_x.array(mfi);
