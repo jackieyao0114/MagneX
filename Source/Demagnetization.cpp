@@ -60,7 +60,7 @@ void Demagnetization::define()
     Geometry cgeom_large(cdomain_large, real_box_large, CoordSys::cartesian, is_periodic);
     auto cba_large = amrex::decompose(cdomain_large, ParallelContext::NProcsSub(),
                                       {AMREX_D_DECL(true,true,false)});
-    DistributionMapping cdm_large = amrex::FFT::detail::make_iota_distromap(cba_large.size());
+    DistributionMapping cdm_large(cba_large);
     
     Kxx_fft.define(cba_large, cdm_large, 1, 0);
     Kxy_fft.define(cba_large, cdm_large, 1, 0);

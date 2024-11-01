@@ -8,6 +8,7 @@ USE_CUDA     = FALSE
 USE_HIP      = FALSE
 COMP         = gnu
 DIM          = 3
+USE_FFT      = TRUE
 
 USE_SUNDIALS = FALSE
 
@@ -45,17 +46,6 @@ ifeq ($(USE_SUNDIALS),TRUE)
     LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nveccuda
   endif
 
-endif
-
-ifeq ($(USE_CUDA),TRUE)
-  libraries += -lcufft
-else ifeq ($(USE_HIP),TRUE)
-  # Use rocFFT.  ROC_PATH is defined in amrex
-  INCLUDE_LOCATIONS += $(ROC_PATH)/rocfft/include
-  LIBRARY_LOCATIONS += $(ROC_PATH)/rocfft/lib
-  LIBRARIES += -L$(ROC_PATH)/rocfft/lib -lrocfft
-else
-  libraries += -lfftw3_mpi -lfftw3f -lfftw3
 endif
 
 include $(AMREX_HOME)/Src/Base/Make.package
