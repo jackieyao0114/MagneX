@@ -1,5 +1,3 @@
-#include <heffte.h>
-
 #ifdef AMREX_USE_CUDA
 #include <cufft.h>
 #else

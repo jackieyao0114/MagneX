@@ -11,22 +11,11 @@ DIM          = 3
 
 USE_SUNDIALS = FALSE
 
-ifeq ($(USE_CUDA),TRUE)
-  HEFFTE_HOME ?= ../../heffte/build_cuda
-else ifeq ($(USE_CUDA),FALSE) 
-  HEFFTE_HOME ?= ../../heffte/build
-endif
-
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 include ../Source/Make.package
 VPATH_LOCATIONS  += ../Source
-VPATH_LOCATIONS += $(HEFFTE_HOME)/include
-INCLUDE_LOCATIONS += $(HEFFTE_HOME)/include
-LIBRARY_LOCATIONS += $(HEFFTE_HOME)/lib
 INCLUDE_LOCATIONS += ../Source
-
-libraries += -lheffte
 
 ifeq ($(USE_SUNDIALS),TRUE)
   ifeq ($(USE_CUDA),TRUE)
@@ -70,6 +59,7 @@ else
 endif
 
 include $(AMREX_HOME)/Src/Base/Make.package
+include $(AMREX_HOME)/Src/FFT/Make.package
 include $(AMREX_HOME)/Src/Boundary/Make.package 
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 

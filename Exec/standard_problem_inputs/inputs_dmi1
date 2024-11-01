@@ -1,3 +1,6 @@
+amrex.use_gpu_aware_mpi=1
+
+
 n_cell = 128 128 4
 max_grid_size_x = 128
 max_grid_size_y = 128
