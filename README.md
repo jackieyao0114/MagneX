@@ -10,7 +10,7 @@ Here are instructions for a basic, pure-MPI (no GPU) installation.  More detaile
 ## Download AMReX and MagneX Repositories
 Make sure that AMReX and MagneX are cloned at the same root location. \
 ``` >> git clone https://github.com/AMReX-Codes/amrex.git ``` \
-``` >> git clone https://AMReX-Microelectronics/MagneX.git ```
+``` >> git clone https://github.com/AMReX-Microelectronics/MagneX.git ```
 ## Dependencies
 Beyond a standard Ubuntu22 installation, the Ubuntu packages libfftw3-dev, libfftw3-mpi-dev, and cmake are required.\
 SUNDIALS is optional and enables Runge-Kutta, implicit, and multirate integrators (more detailed instructions in the full documentation).\
