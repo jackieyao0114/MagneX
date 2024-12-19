@@ -7,9 +7,9 @@ void NormalizeM(Array< MultiFab, AMREX_SPACEDIM >& Mfield,
     // timer for profiling
     BL_PROFILE_VAR("NormalizeM()",NormalizeM);
 
-    for (MFIter mfi(Mfield[0]); mfi.isValid(); ++mfi)
+    for (MFIter mfi(Mfield[0],TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
-        const Box& bx = mfi.validbox();
+        const Box& bx = mfi.tilebox();
         // extract field data
         const Array4<Real>& Mx = Mfield[0].array(mfi);         
         const Array4<Real>& My = Mfield[1].array(mfi);         

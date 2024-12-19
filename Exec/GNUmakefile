@@ -8,25 +8,15 @@ USE_CUDA     = FALSE
 USE_HIP      = FALSE
 COMP         = gnu
 DIM          = 3
+USE_FFT      = TRUE
 
 USE_SUNDIALS = FALSE
-
-ifeq ($(USE_CUDA),TRUE)
-  HEFFTE_HOME ?= ../../heffte/build_cuda
-else ifeq ($(USE_CUDA),FALSE) 
-  HEFFTE_HOME ?= ../../heffte/build
-endif
 
 include $(AMREX_HOME)/Tools/GNUMake/Make.defs
 
 include ../Source/Make.package
 VPATH_LOCATIONS  += ../Source
-VPATH_LOCATIONS += $(HEFFTE_HOME)/include
-INCLUDE_LOCATIONS += $(HEFFTE_HOME)/include
-LIBRARY_LOCATIONS += $(HEFFTE_HOME)/lib
 INCLUDE_LOCATIONS += ../Source
-
-libraries += -lheffte
 
 ifeq ($(USE_SUNDIALS),TRUE)
   ifeq ($(USE_CUDA),TRUE)
@@ -34,7 +24,11 @@ ifeq ($(USE_SUNDIALS),TRUE)
   else
     SUNDIALS_ROOT ?= $(TOP)../../sundials/instdir
   endif
-  SUNDIALS_LIB_DIR ?= $(SUNDIALS_ROOT)/lib
+  ifeq ($(NERSC_HOST),perlmutter)
+    SUNDIALS_LIB_DIR ?= $(SUNDIALS_ROOT)/lib64
+  else
+    SUNDIALS_LIB_DIR ?= $(SUNDIALS_ROOT)/lib
+  endif
 
   USE_CVODE_LIBS ?= TRUE
   USE_ARKODE_LIBS ?= TRUE
@@ -46,26 +40,16 @@ ifeq ($(USE_SUNDIALS),TRUE)
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_cvode
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_arkode
   LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nvecmanyvector
-  LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_core  # for newer versions of sundials
-  
+  LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_core
+
   ifeq ($(USE_CUDA),TRUE)
-  LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nveccuda
+    LIBRARIES += -L$(SUNDIALS_LIB_DIR) -lsundials_nveccuda
   endif
 
 endif
 
-ifeq ($(USE_CUDA),TRUE)
-  libraries += -lcufft
-else ifeq ($(USE_HIP),TRUE)
-  # Use rocFFT.  ROC_PATH is defined in amrex
-  INCLUDE_LOCATIONS += $(ROC_PATH)/rocfft/include
-  LIBRARY_LOCATIONS += $(ROC_PATH)/rocfft/lib
-  LIBRARIES += -L$(ROC_PATH)/rocfft/lib -lrocfft
-else
-  libraries += -lfftw3_mpi -lfftw3f -lfftw3
-endif
-
 include $(AMREX_HOME)/Src/Base/Make.package
+include $(AMREX_HOME)/Src/FFT/Make.package
 include $(AMREX_HOME)/Src/Boundary/Make.package 
 include $(AMREX_HOME)/Tools/GNUMake/Make.rules
 

@@ -86,9 +86,9 @@ void Compute_LLG_RHS(
     // timer for profiling
     BL_PROFILE_VAR("Compute_LLG_RHS()",Compute_LLG_RHS);
 
-    for (MFIter mfi(LLG_RHS[0]); mfi.isValid(); ++mfi)
+    for (MFIter mfi(LLG_RHS[0],TilingIfNotGPU()); mfi.isValid(); ++mfi)
     {
-        const Box& bx = mfi.validbox();
+        const Box& bx = mfi.tilebox();
         // extract field data
         const Array4<Real>& Hx_demag= H_demagfield[0].array(mfi);
         const Array4<Real>& Hy_demag= H_demagfield[1].array(mfi);
